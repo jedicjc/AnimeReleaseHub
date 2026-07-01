@@ -1,0 +1,16 @@
+services:
+  database:
+    image: postgres:16
+    container_name: anime_release_hub_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: animehub
+      POSTGRES_PASSWORD: animehub_password
+      POSTGRES_DB: anime_release_hub
+    ports:
+      - "5432:5432"
+    volumes:
+      - anime_release_hub_postgres:/var/lib/postgresql/data
+
+volumes:
+  anime_release_hub_postgres:

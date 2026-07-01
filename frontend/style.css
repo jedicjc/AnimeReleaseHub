@@ -1,0 +1,148 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background:
+    radial-gradient(circle at top right, rgba(217, 154, 197, 0.35), transparent 35%),
+    linear-gradient(135deg, #120d1c, #241531, #4b2b68);
+  color: #f8f4ff;
+}
+
+.page {
+  min-height: 100vh;
+  padding: 28px;
+}
+
+.nav {
+  max-width: 1180px;
+  margin: 0 auto 64px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  font-weight: 800;
+  font-size: 22px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 24px;
+  color: #d9c9ff;
+}
+
+.nav-links a {
+  cursor: pointer;
+}
+
+.hero {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 40px;
+  align-items: center;
+}
+
+.badge {
+  display: inline-block;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(217, 154, 197, 0.2);
+  color: #ffd6ef;
+  margin-bottom: 22px;
+}
+
+h1 {
+  font-size: clamp(42px, 6vw, 76px);
+  line-height: 0.95;
+  margin: 0 0 24px;
+}
+
+.hero-text p {
+  max-width: 620px;
+  font-size: 19px;
+  line-height: 1.65;
+  color: #eee6ff;
+}
+
+.actions {
+  margin-top: 32px;
+}
+
+button {
+  border: none;
+  padding: 14px 24px;
+  margin-right: 12px;
+  border-radius: 999px;
+  background: #d99ac5;
+  color: #1a1024;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8f4ff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.maple-card {
+  border-radius: 36px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.35);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.maple-card img {
+  width: 100%;
+  max-height: 620px;
+  object-fit: contain;
+}
+
+.dashboard {
+  max-width: 1180px;
+  margin: 56px auto 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+.card {
+  padding: 26px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.card span {
+  color: #d9c9ff;
+}
+
+.card strong {
+  display: block;
+  margin: 10px 0;
+  font-size: 32px;
+}
+
+.card p {
+  color: #eee6ff;
+}
+
+@media (max-width: 850px) {
+  .hero,
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .nav {
+    align-items: flex-start;
+    gap: 18px;
+    flex-direction: column;
+  }
+}
