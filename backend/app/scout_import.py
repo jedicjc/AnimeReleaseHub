@@ -1,8 +1,22 @@
+import re
+
 import requests
 from bs4 import BeautifulSoup
 
 from app.database.connection import SessionLocal
-from app.database.models import NewsArticle
+from app.database.models import Anime, NewsArticle
+
+
+def extract_anime_title(headline: str):
+    quoted_match = re.search(r"'([^']+)'", headline)
+
+    if quoted_match:
+        return quoted_match.group(1)
+
+    if "Cyberpunk: Edgerunners 2" in headline:
+        return "Cyberpunk: Edgerunners 2"
+
+    return None
 
 
 def fetch_mal_articles():
@@ -51,39 +65,67 @@ def fetch_mal_articles():
 def save_articles():
     db = SessionLocal()
 
-    saved = 0
-    skipped = 0
+    saved_articles = 0
+    skipped_articles = 0
+    created_anime = 0
+    skipped_anime = 0
 
     try:
         articles = fetch_mal_articles()
 
         for article in articles:
-            existing = (
+            existing_article = (
                 db.query(NewsArticle)
                 .filter(NewsArticle.url == article["url"])
                 .first()
             )
 
-            if existing:
-                skipped += 1
+            if existing_article:
+                skipped_articles += 1
+            else:
+                db_article = NewsArticle(
+                    title=article["title"],
+                    source=article["source"],
+                    url=article["url"],
+                    summary=None,
+                    processed=False,
+                )
+
+                db.add(db_article)
+                saved_articles += 1
+
+            anime_title = extract_anime_title(article["title"])
+
+            if not anime_title:
                 continue
 
-            db_article = NewsArticle(
-                title=article["title"],
-                source=article["source"],
-                url=article["url"],
-                summary=None,
-                processed=False,
+            existing_anime = (
+                db.query(Anime)
+                .filter(Anime.title == anime_title)
+                .first()
             )
 
-            db.add(db_article)
-            saved += 1
+            if existing_anime:
+                skipped_anime += 1
+                continue
+
+            db_anime = Anime(
+                title=anime_title,
+                status="announced",
+                source_url=article["url"],
+                notes=f"Created automatically from headline: {article['title']}",
+            )
+
+            db.add(db_anime)
+            created_anime += 1
 
         db.commit()
 
-        print("🍁 Maple Scout import complete.")
-        print(f"Saved new articles: {saved}")
-        print(f"Skipped duplicates: {skipped}")
+        print("Maple Scout import complete.")
+        print(f"Saved new articles: {saved_articles}")
+        print(f"Skipped duplicate articles: {skipped_articles}")
+        print(f"Created anime records: {created_anime}")
+        print(f"Skipped duplicate anime: {skipped_anime}")
 
     finally:
         db.close()
