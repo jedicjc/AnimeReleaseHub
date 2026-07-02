@@ -3,12 +3,40 @@ from app.database.models import Anime
 from datetime import datetime, timedelta
 
 
-def calculate_trend_score(anime):
+def category_weight(category: str | None) -> int:
+    if category == "trailer":
+        return 25
+    if category == "sequel":
+        return 22
+    if category == "new_adaptation":
+        return 20
+    if category == "cast_update":
+        return 12
+    if category == "staff_update":
+        return 10
+    if category == "dub_update":
+        return 8
+    if category == "delay":
+        return -10
+
+    return 5
+
+
+def calculate_trend_score(anime_or_category, anime_score: float | None = None):
     """
     Simple but powerful heuristic trend engine
     (can later upgrade to real analytics / ML)
     """
 
+    if isinstance(anime_or_category, str) or anime_or_category is None:
+        score = category_weight(anime_or_category)
+
+        if anime_score:
+            score += anime_score * 5
+
+        return round(max(score, 0), 2)
+
+    anime = anime_or_category
     score = 0
 
     # base popularity

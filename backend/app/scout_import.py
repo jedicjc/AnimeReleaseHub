@@ -10,7 +10,7 @@ from app.database.models import Anime, NewsArticle
 from app.scout.config import JIKAN_DELAY, REQUEST_TIMEOUT, SCOUT_LIMIT
 from app.scout.matching import is_good_jikan_match
 from app.scout.sources import HEADERS, MAL_NEWS_URL
-from app.scout.trends import calculate_trend_score
+from app.maple.trends import calculate_trend_score
 
 
 JIKAN_API_URL = "https://api.jikan.moe/v4/anime"
