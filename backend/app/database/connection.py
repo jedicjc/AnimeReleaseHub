@@ -1,9 +1,21 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = "postgresql://animehub:animehub_password@localhost:5432/anime_release_hub"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-engine = create_engine(DATABASE_URL)
+if not DATABASE_URL:
+    DATABASE_URL = "sqlite:///./anime.db"
+
+connect_args = {}
+
+if DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+
+engine = create_engine(
+    DATABASE_URL,
+    connect_args=connect_args,
+)
 
 SessionLocal = sessionmaker(
     autocommit=False,
@@ -12,6 +24,9 @@ SessionLocal = sessionmaker(
 )
 
 
-def test_database_connection():
-    with engine.connect() as connection:
-        return True
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

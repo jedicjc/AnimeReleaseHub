@@ -1,5 +1,6 @@
 fastapi
-uvicorn[standard]
-openai
-python-dotenv
+uvicorn
 sqlalchemy
+python-dotenv
+openai
+watchfiles
