@@ -5,7 +5,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from app.database.connection import SessionLocal, ensure_news_article_columns
+from app.database.connection import SessionLocal
 from app.database.models import Anime, NewsArticle
 from app.scout.config import JIKAN_DELAY, REQUEST_TIMEOUT, SCOUT_LIMIT
 from app.scout.matching import is_good_jikan_match
@@ -342,7 +342,6 @@ def upsert_anime_from_article(db, article):
 
 
 def save_articles():
-    ensure_news_article_columns()
     db = SessionLocal()
 
     stats = {
