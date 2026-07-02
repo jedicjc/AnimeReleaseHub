@@ -10,7 +10,11 @@ def list_anime():
     db = SessionLocal()
 
     try:
-        anime = db.query(Anime).all()
+        anime = (
+            db.query(Anime)
+            .order_by(Anime.trend_score.desc(), Anime.created_at.desc())
+            .all()
+        )
         return anime
     finally:
         db.close()
