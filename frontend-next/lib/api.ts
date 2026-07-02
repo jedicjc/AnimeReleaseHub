@@ -12,6 +12,11 @@ export type Anime = {
   streaming_platform: string | null;
   english_dub_status: string;
   source_url: string | null;
+  poster_url: string | null;
+  synopsis: string | null;
+  score: number | null;
+  genres: string | null;
+  notes?: string | null;
 };
 
 export async function getDashboard(): Promise<DashboardData> {
@@ -25,6 +30,7 @@ export async function getDashboard(): Promise<DashboardData> {
       anime_count: 0,
       dub_count: 0,
       latest_news: [],
+      category_counts: {},
     };
   }
 
@@ -42,6 +48,7 @@ export async function getAnime(): Promise<Anime[]> {
 
   return response.json();
 }
+
 export async function getAnimeById(id: string): Promise<Anime | null> {
   const response = await fetch(`${API_URL}/anime/${id}`, {
     cache: "no-store",
@@ -49,6 +56,18 @@ export async function getAnimeById(id: string): Promise<Anime | null> {
 
   if (!response.ok) {
     return null;
+  }
+
+  return response.json();
+}
+
+export async function getTrending() {
+  const response = await fetch(`${API_URL}/trending/`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    return [];
   }
 
   return response.json();

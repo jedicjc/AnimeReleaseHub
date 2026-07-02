@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text
+from sqlalchemy import Column, Float, Integer, String, DateTime, Boolean, Text
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -18,6 +18,12 @@ class Anime(Base):
     streaming_platform = Column(String, nullable=True)
     english_dub_status = Column(String, default="unknown")
     source_url = Column(String, nullable=True)
+
+    poster_url = Column(String, nullable=True)
+    synopsis = Column(Text, nullable=True)
+    score = Column(Float, nullable=True)
+    genres = Column(String, nullable=True)
+
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
@@ -33,4 +39,13 @@ class NewsArticle(Base):
     category = Column(String, default="general")
     summary = Column(Text, nullable=True)
     processed = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class AnimeTrendHistory(Base):
+    __tablename__ = "anime_trend_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    anime_id = Column(Integer, nullable=False)
+
+    trend_score = Column(Float, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)

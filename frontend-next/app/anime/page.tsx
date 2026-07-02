@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { AnimeGrid } from "@/components/AnimeGrid";
+import { FeaturedAnime } from "@/components/FeaturedAnime";
+import { Navbar } from "@/components/Navbar";
 import { getAnime } from "@/lib/api";
 
 export default async function AnimePage() {
@@ -7,27 +9,45 @@ export default async function AnimePage() {
 
   return (
     <main className="min-h-screen bg-[#120d1c] text-white">
-      <section className="mx-auto max-w-7xl px-6 py-10">
-        <div className="flex items-center justify-between">
+      <section className="mx-auto max-w-7xl px-6 py-8">
+        <Navbar />
+
+        <div className="mt-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-5xl font-black">
-              🍁 Anime Library
+            <p className="text-sm uppercase tracking-widest text-pink-300">
+              Maple Library
+            </p>
+
+            <h1 className="mt-2 text-5xl font-black">
+              Anime Library
             </h1>
 
-            <p className="mt-3 text-purple-200">
-              Maple is currently tracking {anime.length} anime.
+            <p className="mt-4 text-lg text-purple-200">
+              Maple is currently tracking{" "}
+              <span className="font-bold text-white">
+                {anime.length}
+              </span>{" "}
+              anime titles.
             </p>
           </div>
 
           <Link
             href="/"
-            className="rounded-xl bg-pink-500 px-5 py-3 font-bold"
+            className="rounded-xl border border-pink-300/30 bg-pink-500/20 px-6 py-3 font-bold transition hover:bg-pink-500/30"
           >
-            Dashboard
+            ← Dashboard
           </Link>
         </div>
 
-        <AnimeGrid anime={anime} />
+        {anime.length > 0 && (
+          <div className="mt-10">
+            <FeaturedAnime anime={anime[0]} />
+          </div>
+        )}
+
+        <div className="mt-10">
+          <AnimeGrid anime={anime} />
+        </div>
       </section>
     </main>
   );

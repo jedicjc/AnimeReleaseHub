@@ -1,4 +1,5 @@
 import re
+import time
 
 import requests
 from bs4 import BeautifulSoup
@@ -7,27 +8,24 @@ from app.database.connection import SessionLocal
 from app.database.models import Anime, NewsArticle
 
 
+JIKAN_API_URL = "https://api.jikan.moe/v4/anime"
+
+
 def classify_article(headline: str):
     text = headline.lower()
 
     if "second season" in text or "season 2" in text:
         return "sequel"
-
     if "tv anime adaptation" in text or "gets tv anime" in text:
         return "new_adaptation"
-
     if "trailer" in text or "promo" in text or "teaser" in text:
         return "trailer"
-
     if "cast" in text:
         return "cast_update"
-
     if "staff" in text:
         return "staff_update"
-
     if "dub" in text or "english dub" in text:
         return "dub_update"
-
     if "delayed" in text:
         return "delay"
 
@@ -50,9 +48,7 @@ def extract_release_info(headline: str):
     release_season = None
     release_year = None
 
-    seasons = ["Winter", "Spring", "Summer", "Fall"]
-
-    for season in seasons:
+    for season in ["Winter", "Spring", "Summer", "Fall"]:
         if season.lower() in headline.lower():
             release_season = season
             break
@@ -62,6 +58,52 @@ def extract_release_info(headline: str):
         release_year = int(year_match.group(1))
 
     return release_season, release_year
+
+
+def fetch_jikan_metadata(title: str):
+    try:
+        response = requests.get(
+            JIKAN_API_URL,
+            params={"q": title, "limit": 1, "sfw": "true"},
+            timeout=15,
+            headers={"User-Agent": "AnimeReleaseHub MapleOS/0.1"},
+        )
+
+        response.raise_for_status()
+        data = response.json()
+
+        results = data.get("data", [])
+        if not results:
+            return {}
+
+        anime = results[0]
+
+        display_title = (
+            anime.get("title_english")
+            or anime.get("title")
+            or title
+        )
+
+        images = anime.get("images", {})
+        jpg = images.get("jpg", {})
+
+        genres = ", ".join(
+            genre.get("name", "")
+            for genre in anime.get("genres", [])
+            if genre.get("name")
+        )
+
+        return {
+            "display_title": display_title,
+            "poster_url": jpg.get("large_image_url") or jpg.get("image_url"),
+            "synopsis": anime.get("synopsis"),
+            "score": anime.get("score"),
+            "genres": genres or None,
+        }
+
+    except Exception as error:
+        print(f"Jikan lookup failed for {title}: {error}")
+        return {}
 
 
 def fetch_mal_articles():
@@ -75,7 +117,6 @@ def fetch_mal_articles():
     response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")
-
     articles = []
 
     for link in soup.select("a"):
@@ -116,6 +157,7 @@ def save_articles():
     skipped_articles = 0
     created_anime = 0
     updated_anime = 0
+    enriched_anime = 0
 
     try:
         articles = fetch_mal_articles()
@@ -143,12 +185,16 @@ def save_articles():
                 )
                 saved_articles += 1
 
-            anime_title = extract_anime_title(article["title"])
+            extracted_title = extract_anime_title(article["title"])
 
-            if not anime_title:
+            if not extracted_title:
                 continue
 
             release_season, release_year = extract_release_info(article["title"])
+            metadata = fetch_jikan_metadata(extracted_title)
+            time.sleep(0.5)
+
+            anime_title = metadata.get("display_title") or extracted_title
 
             existing_anime = (
                 db.query(Anime)
@@ -163,6 +209,19 @@ def save_articles():
                 if release_year:
                     existing_anime.status = "upcoming"
 
+                if metadata.get("poster_url"):
+                    existing_anime.poster_url = metadata.get("poster_url")
+                    enriched_anime += 1
+
+                if metadata.get("synopsis"):
+                    existing_anime.synopsis = metadata.get("synopsis")
+
+                if metadata.get("score") is not None:
+                    existing_anime.score = metadata.get("score")
+
+                if metadata.get("genres"):
+                    existing_anime.genres = metadata.get("genres")
+
                 updated_anime += 1
                 continue
 
@@ -173,19 +232,27 @@ def save_articles():
                     release_season=release_season,
                     release_year=release_year,
                     source_url=article["url"],
+                    poster_url=metadata.get("poster_url"),
+                    synopsis=metadata.get("synopsis"),
+                    score=metadata.get("score"),
+                    genres=metadata.get("genres"),
                     notes=f"Created automatically from headline: {article['title']}",
                 )
             )
 
             created_anime += 1
 
+            if metadata.get("poster_url"):
+                enriched_anime += 1
+
         db.commit()
 
         print("\n🍁 Maple Scout Import Complete")
-        print(f"New Articles:      {saved_articles}")
-        print(f"Skipped Articles:  {skipped_articles}")
-        print(f"New Anime:         {created_anime}")
-        print(f"Updated Anime:     {updated_anime}")
+        print(f"New Articles:       {saved_articles}")
+        print(f"Skipped Articles:   {skipped_articles}")
+        print(f"New Anime:          {created_anime}")
+        print(f"Updated Anime:      {updated_anime}")
+        print(f"Enriched with Art:  {enriched_anime}")
 
     finally:
         db.close()
