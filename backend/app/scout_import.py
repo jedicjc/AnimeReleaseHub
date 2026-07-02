@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 from app.database.connection import SessionLocal
 from app.database.models import Anime, NewsArticle
 from app.scout.config import JIKAN_DELAY, REQUEST_TIMEOUT, SCOUT_LIMIT
+from app.scout.matching import is_good_jikan_match
 from app.scout.sources import HEADERS, MAL_NEWS_URL
 
 
@@ -85,6 +86,10 @@ def fetch_jikan_metadata(title: str):
             return {}
 
         anime = results[0]
+
+        if not is_good_jikan_match(title, anime):
+            print(f"Rejected weak Jikan match: {title} -> {anime.get('title')}")
+            return {}
 
         images = anime.get("images", {})
         jpg = images.get("jpg", {})
