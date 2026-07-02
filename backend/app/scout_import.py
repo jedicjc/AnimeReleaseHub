@@ -13,6 +13,20 @@ from app.scout.sources import HEADERS, MAL_NEWS_URL
 
 
 JIKAN_API_URL = "https://api.jikan.moe/v4/anime"
+METADATA_FIELDS = {
+    "japanese_title": "japanese_title",
+    "anime_type": "anime_type",
+    "episodes": "episodes",
+    "rating": "rating",
+    "members": "members",
+    "favorites": "favorites",
+    "rank": "rank",
+    "popularity": "popularity",
+    "trailer_url": "trailer_url",
+    "studio": "studio",
+    "aired_from": "aired_from",
+    "aired_to": "aired_to",
+}
 
 
 def classify_article(headline: str) -> str:
@@ -100,12 +114,33 @@ def fetch_jikan_metadata(title: str):
             if genre.get("name")
         )
 
+        studios = ", ".join(
+            studio.get("name", "")
+            for studio in anime.get("studios", [])
+            if studio.get("name")
+        )
+
+        trailer = anime.get("trailer", {})
+        aired = anime.get("aired", {})
+
         return {
             "display_title": anime.get("title_english") or anime.get("title") or title,
+            "japanese_title": anime.get("title_japanese"),
             "poster_url": jpg.get("large_image_url") or jpg.get("image_url"),
             "synopsis": anime.get("synopsis"),
             "score": anime.get("score"),
             "genres": genres or None,
+            "episodes": anime.get("episodes"),
+            "anime_type": anime.get("type"),
+            "rating": anime.get("rating"),
+            "members": anime.get("members"),
+            "favorites": anime.get("favorites"),
+            "rank": anime.get("rank"),
+            "popularity": anime.get("popularity"),
+            "trailer_url": trailer.get("url"),
+            "studio": studios or None,
+            "aired_from": aired.get("from"),
+            "aired_to": aired.get("to"),
         }
 
     except Exception as error:
@@ -194,6 +229,14 @@ def upsert_news_article(db, article):
     return "created"
 
 
+def apply_anime_metadata(anime, metadata):
+    for field_name, metadata_key in METADATA_FIELDS.items():
+        value = metadata.get(metadata_key)
+
+        if value is not None:
+            setattr(anime, field_name, value)
+
+
 def upsert_anime_from_article(db, article):
     extracted_title = extract_anime_title(article["title"])
 
@@ -253,22 +296,26 @@ def upsert_anime_from_article(db, article):
         if metadata.get("genres"):
             existing.genres = metadata["genres"]
 
+        apply_anime_metadata(existing, metadata)
+
         return "updated"
 
-    db.add(
-        Anime(
-            title=anime_title,
-            status="upcoming" if release_year else "announced",
-            release_season=release_season,
-            release_year=release_year,
-            source_url=article["url"],
-            poster_url=metadata.get("poster_url"),
-            synopsis=metadata.get("synopsis"),
-            score=metadata.get("score"),
-            genres=metadata.get("genres"),
-            notes=f"Created automatically from headline: {article['title']}",
-        )
+    anime = Anime(
+        title=anime_title,
+        status="upcoming" if release_year else "announced",
+        release_season=release_season,
+        release_year=release_year,
+        source_url=article["url"],
+        poster_url=metadata.get("poster_url"),
+        synopsis=metadata.get("synopsis"),
+        score=metadata.get("score"),
+        genres=metadata.get("genres"),
+        trend_score=0,
+        notes=f"Created automatically from headline: {article['title']}",
     )
+
+    apply_anime_metadata(anime, metadata)
+    db.add(anime)
 
     return "created"
 
