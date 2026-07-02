@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { motion } from "framer-motion";
 
 type Anime = {
   id: number;
@@ -19,6 +22,8 @@ function getBarPercent(score: number) {
 }
 
 export function TrendingNow({ anime }: Props) {
+  if (!anime || anime.length === 0) return null;
+
   return (
     <section className="mt-10 rounded-[2rem] border border-white/10 bg-white/5 p-8">
       <h2 className="text-2xl font-black">🔥 Trending Now</h2>
@@ -32,40 +37,46 @@ export function TrendingNow({ anime }: Props) {
           const percent = getBarPercent(item.trend_score);
 
           return (
-            <Link
+            <motion.div
               key={item.id}
-              href={`/anime/${item.id}`}
-              className="block rounded-2xl border border-white/10 bg-gradient-to-b from-black/40 to-black/20 p-5 transition-all hover:-translate-y-1 hover:border-pink-300/30 hover:shadow-lg hover:shadow-pink-500/10"
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.05 }}
             >
-              <div className="flex items-center justify-between gap-4">
-                <div className="font-bold">
-                  #{index + 1} {item.title}
+              <Link
+                href={`/anime/${item.id}`}
+                className="block rounded-2xl border border-white/10 bg-gradient-to-b from-black/40 to-black/20 p-5 transition hover:-translate-y-1 hover:border-pink-300/30 hover:shadow-lg hover:shadow-pink-500/10"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="font-bold">
+                    #{index + 1} {item.title}
+                  </div>
+
+                  <div className="text-xs font-semibold text-purple-300">
+                    {item.spike_label ?? "➖ Stable Interest"}
+                  </div>
                 </div>
 
-                <div className="text-xs text-purple-300">
-                  {item.spike_label ?? "➖ Stable Interest"}
-                </div>
-              </div>
+                <div className="mt-4">
+                  <div className="h-3 overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-pink-400 shadow-[0_0_12px_rgba(244,114,182,0.55)]"
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
 
-              <div className="mt-4">
-                <div className="h-3 overflow-hidden rounded-full bg-white/10">
-                  <div
-                    className="h-full rounded-full bg-pink-400 shadow-[0_0_12px_rgba(244,114,182,0.55)]"
-                    style={{ width: `${percent}%` }}
-                  />
+                  <div className="mt-2 text-xs text-purple-300">
+                    Hype Score: {item.trend_score.toFixed(0)}
+                  </div>
                 </div>
 
-                <div className="mt-2 text-xs text-purple-300">
-                  Hype Score: {item.trend_score.toFixed(0)}
-                </div>
-              </div>
-
-              {item.insight && (
-                <p className="mt-3 text-xs leading-relaxed text-purple-300">
-                  {item.insight}
-                </p>
-              )}
-            </Link>
+                {item.insight && (
+                  <p className="mt-3 text-xs leading-relaxed text-purple-300">
+                    {item.insight}
+                  </p>
+                )}
+              </Link>
+            </motion.div>
           );
         })}
       </div>

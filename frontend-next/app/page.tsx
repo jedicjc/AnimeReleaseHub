@@ -6,7 +6,6 @@ import { NewsGrid } from "@/components/NewsGrid";
 import { SearchBar } from "@/components/SearchBar";
 import { StatsCards } from "@/components/StatsCards";
 import { TrendingNow } from "@/components/TrendingNow";
-
 import { getDashboard, getTrending } from "@/lib/api";
 
 function getGreeting() {
@@ -26,7 +25,6 @@ export default async function Home() {
       <section className="mx-auto max-w-7xl px-6 py-8">
         <Navbar />
 
-        {/* HERO SECTION */}
         <section className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_380px]">
           <div className="rounded-[2rem] border border-white/10 bg-white/10 p-8">
             <div className="mb-4 inline-flex rounded-full border border-pink-300/30 bg-pink-300/10 px-4 py-2 text-sm text-pink-100">
@@ -38,8 +36,8 @@ export default async function Home() {
             </h1>
 
             <p className="mt-5 max-w-2xl text-lg leading-8 text-purple-100">
-              Maple scans anime news, tracks announcements, and builds a live
-              intelligence feed of what’s happening in anime right now.
+              Maple tracks anime news, builds intelligence signals, and ranks
+              what matters right now.
             </p>
 
             <SearchBar />
@@ -50,20 +48,16 @@ export default async function Home() {
           <MaplePanel />
         </section>
 
-        {/* STATS */}
         <StatsCards
           newsCount={dashboard.news_count}
           animeCount={dashboard.anime_count}
           dubCount={dashboard.dub_count}
         />
 
-        {/* ACTIVITY */}
         <ActivitySummary categoryCounts={dashboard.category_counts} />
 
-        {/* TRENDING */}
         <TrendingNow anime={trending} />
 
-        {/* NEWS */}
         <NewsGrid articles={dashboard.latest_news} />
       </section>
     </main>
