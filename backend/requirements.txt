@@ -4,3 +4,5 @@ sqlalchemy
 python-dotenv
 openai
 watchfiles
+requests
+beautifulsoup4
