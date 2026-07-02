@@ -249,7 +249,7 @@ def upsert_anime_from_article(db, article):
     metadata = fetch_jikan_metadata(extracted_title)
     time.sleep(JIKAN_DELAY)
     trend_score = calculate_trend_score(
-        article.get("category"),
+        article["category"],
         metadata.get("score"),
     )
 
