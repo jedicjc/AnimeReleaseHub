@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 
 from app.database.connection import SessionLocal
 from app.database.models import Anime, NewsArticle
+from app.scout.config import JIKAN_DELAY, REQUEST_TIMEOUT, SCOUT_LIMIT
 from app.scout.sources import HEADERS, MAL_NEWS_URL
 
 
@@ -72,7 +73,7 @@ def fetch_jikan_metadata(title: str):
         response = requests.get(
             JIKAN_API_URL,
             params={"q": title, "limit": 1, "sfw": "true"},
-            timeout=15,
+            timeout=REQUEST_TIMEOUT,
             headers=HEADERS,
         )
 
@@ -110,7 +111,7 @@ def fetch_jikan_metadata(title: str):
 def fetch_mal_articles(limit: int = 10):
     response = requests.get(
         MAL_NEWS_URL,
-        timeout=15,
+        timeout=REQUEST_TIMEOUT,
         headers=HEADERS,
     )
     response.raise_for_status()
@@ -150,11 +151,23 @@ def fetch_mal_articles(limit: int = 10):
 
 
 def upsert_news_article(db, article):
+    pending = next(
+        (
+            item
+            for item in db.new
+            if isinstance(item, NewsArticle) and item.url == article["url"]
+        ),
+        None,
+    )
+
     existing = (
         db.query(NewsArticle)
         .filter(NewsArticle.url == article["url"])
         .first()
     )
+
+    if not existing and pending:
+        existing = pending
 
     if existing:
         existing.title = article["title"]
@@ -185,15 +198,27 @@ def upsert_anime_from_article(db, article):
     release_season, release_year = extract_release_info(article["title"])
 
     metadata = fetch_jikan_metadata(extracted_title)
-    time.sleep(0.5)
+    time.sleep(JIKAN_DELAY)
 
     anime_title = metadata.get("display_title") or extracted_title
+
+    pending = next(
+        (
+            item
+            for item in db.new
+            if isinstance(item, Anime) and item.title == anime_title
+        ),
+        None,
+    )
 
     existing = (
         db.query(Anime)
         .filter(Anime.source_url == article["url"])
         .first()
     )
+
+    if not existing and pending:
+        existing = pending
 
     if not existing:
         existing = (
@@ -255,7 +280,7 @@ def save_articles():
     }
 
     try:
-        articles = fetch_mal_articles(limit=10)
+        articles = fetch_mal_articles(limit=SCOUT_LIMIT)
 
         for article in articles:
             article_status = upsert_news_article(db, article)
@@ -276,7 +301,7 @@ def save_articles():
 
         db.commit()
 
-        print("\n🍁 Maple Scout 2.0 Import Complete")
+        print("\nMaple Scout 2.0 Import Complete")
         print(f"Articles Created: {stats['articles_created']}")
         print(f"Articles Updated: {stats['articles_updated']}")
         print(f"Anime Created:    {stats['anime_created']}")

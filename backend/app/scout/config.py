@@ -1,0 +1,4 @@
+SCOUT_LIMIT = 50
+JIKAN_DELAY = 0.5
+REQUEST_TIMEOUT = 15
+USER_AGENT = "AnimeReleaseHub MapleScout/2.1"
