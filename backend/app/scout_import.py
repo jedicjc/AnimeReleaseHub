@@ -5,7 +5,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from app.database.connection import SessionLocal
+from app.database.connection import SessionLocal, ensure_news_article_columns
 from app.database.models import Anime, NewsArticle
 from app.scout.config import JIKAN_DELAY, REQUEST_TIMEOUT, SCOUT_LIMIT
 from app.scout.matching import is_good_jikan_match
@@ -238,6 +238,17 @@ def apply_anime_metadata(anime, metadata):
             setattr(anime, field_name, value)
 
 
+def attach_article_to_anime(db, article_url: str, anime_id: int):
+    article = (
+        db.query(NewsArticle)
+        .filter(NewsArticle.url == article_url)
+        .first()
+    )
+
+    if article:
+        article.anime_id = anime_id
+
+
 def upsert_anime_from_article(db, article):
     extracted_title = extract_anime_title(article["title"])
 
@@ -303,6 +314,7 @@ def upsert_anime_from_article(db, article):
 
         existing.trend_score = trend_score
         apply_anime_metadata(existing, metadata)
+        attach_article_to_anime(db, article["url"], existing.id)
 
         return "updated"
 
@@ -322,11 +334,15 @@ def upsert_anime_from_article(db, article):
 
     apply_anime_metadata(anime, metadata)
     db.add(anime)
+    db.flush()
+
+    attach_article_to_anime(db, article["url"], anime.id)
 
     return "created"
 
 
 def save_articles():
+    ensure_news_article_columns()
     db = SessionLocal()
 
     stats = {
