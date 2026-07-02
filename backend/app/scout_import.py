@@ -10,6 +10,7 @@ from app.database.models import Anime, NewsArticle
 from app.scout.config import JIKAN_DELAY, REQUEST_TIMEOUT, SCOUT_LIMIT
 from app.scout.matching import is_good_jikan_match
 from app.scout.sources import HEADERS, MAL_NEWS_URL
+from app.scout.trends import calculate_trend_score
 
 
 JIKAN_API_URL = "https://api.jikan.moe/v4/anime"
@@ -247,6 +248,10 @@ def upsert_anime_from_article(db, article):
 
     metadata = fetch_jikan_metadata(extracted_title)
     time.sleep(JIKAN_DELAY)
+    trend_score = calculate_trend_score(
+        article.get("category"),
+        metadata.get("score"),
+    )
 
     anime_title = metadata.get("display_title") or extracted_title
 
@@ -296,6 +301,7 @@ def upsert_anime_from_article(db, article):
         if metadata.get("genres"):
             existing.genres = metadata["genres"]
 
+        existing.trend_score = trend_score
         apply_anime_metadata(existing, metadata)
 
         return "updated"
@@ -310,7 +316,7 @@ def upsert_anime_from_article(db, article):
         synopsis=metadata.get("synopsis"),
         score=metadata.get("score"),
         genres=metadata.get("genres"),
-        trend_score=0,
+        trend_score=trend_score,
         notes=f"Created automatically from headline: {article['title']}",
     )
 
