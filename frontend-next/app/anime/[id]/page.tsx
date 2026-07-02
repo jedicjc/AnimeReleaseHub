@@ -1,7 +1,10 @@
-import Link from "next/link";
-import { AnimePoster } from "@/components/AnimePoster";
-import { StatusBadge } from "@/components/StatusBadge";
+import { notFound } from "next/navigation";
+
 import { getAnimeById } from "@/lib/api";
+import { AnimePoster } from "@/components/AnimePoster";
+import { Navbar } from "@/components/Navbar";
+import { StatusBadge } from "@/components/StatusBadge";
+import { API_URL } from "@/lib/config";
 
 type Props = {
   params: Promise<{
@@ -9,86 +12,224 @@ type Props = {
   }>;
 };
 
+type MapleResponse = {
+  hype_score?: number;
+  audience?: string;
+  insight?: string;
+};
+
+type ExplanationResponse = {
+  id: number;
+  title: string;
+  explanation: string[];
+};
+
+type Recommendation = {
+  id: number;
+  title: string;
+  score: number;
+  why?: string[];
+};
+
 export default async function AnimeDetailPage({ params }: Props) {
   const { id } = await params;
   const anime = await getAnimeById(id);
 
-  if (!anime) {
-    return (
-      <main className="min-h-screen bg-[#120d1c] text-white">
-        <section className="mx-auto max-w-4xl px-6 py-10">
-          <h1 className="text-4xl font-black">Anime not found</h1>
+  if (!anime?.id) {
+    notFound();
+  }
 
-          <Link href="/anime" className="mt-6 inline-block text-pink-300">
-            ← Back to Anime Library
-          </Link>
-        </section>
-      </main>
-    );
+  const data = {
+    title: anime.title ?? "Unknown Anime",
+    poster_url: anime.poster_url ?? null,
+    status: anime.status ?? "unknown",
+    synopsis: anime.synopsis ?? "No synopsis available.",
+    dub: anime.english_dub_status ?? "Unknown",
+    release:
+      anime.release_season || anime.release_year
+        ? `${anime.release_season ?? ""} ${anime.release_year ?? ""}`.trim()
+        : "Unknown",
+    platform: anime.streaming_platform ?? "Unknown",
+    score: anime.score ?? "N/A",
+    genres: anime.genres ?? null,
+  };
+
+  let maple: MapleResponse | null = null;
+
+  try {
+    const res = await fetch(`${API_URL}/maple/anime/${id}`, {
+      cache: "no-store",
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      if (json?.hype_score !== undefined) {
+        maple = json;
+      }
+    }
+  } catch {
+    maple = null;
+  }
+
+  let explain: ExplanationResponse | null = null;
+
+  try {
+    const res = await fetch(`${API_URL}/maple/explain/${id}`, {
+      cache: "no-store",
+    });
+
+    if (res.ok) {
+      explain = await res.json();
+    }
+  } catch {
+    explain = null;
+  }
+
+  let recs: Recommendation[] = [];
+
+  try {
+    const res = await fetch(`${API_URL}/recommendations/${id}`, {
+      cache: "no-store",
+    });
+
+    if (res.ok) {
+      recs = await res.json();
+    }
+  } catch {
+    recs = [];
   }
 
   return (
     <main className="min-h-screen bg-[#120d1c] text-white">
-      <section className="mx-auto max-w-6xl px-6 py-10">
-        <Link href="/anime" className="text-pink-300">
-          ← Back to Anime Library
-        </Link>
+      <section className="mx-auto max-w-5xl px-6 py-10">
+        <Navbar />
 
-        <div className="mt-8 grid gap-8 rounded-[2rem] border border-white/10 bg-white/10 p-8 lg:grid-cols-[320px_1fr]">
-          <AnimePoster title={anime.title} posterUrl={anime.poster_url} />
+        <div className="mt-10 grid gap-10 lg:grid-cols-[300px_1fr]">
+          <div>
+            <AnimePoster title={data.title} posterUrl={data.poster_url} />
+          </div>
 
           <div>
-            <StatusBadge status={anime.status ?? "unknown"} />
+            <StatusBadge status={data.status} />
 
-            <h1 className="mt-5 text-5xl font-black">{anime.title}</h1>
+            <h1 className="mt-4 text-4xl font-black">{data.title}</h1>
 
-            <div className="mt-8 grid gap-4 md:grid-cols-2">
-              <Info label="English Dub" value={anime.english_dub_status ?? "Unknown"} />
-              <Info label="Streaming" value={anime.streaming_platform ?? "Unknown"} />
-              <Info label="Release Season" value={anime.release_season ?? "Unknown"} />
-              <Info label="Release Year" value={anime.release_year?.toString() ?? "Unknown"} />
-              <Info label="Score" value={anime.score?.toString() ?? "Unknown"} />
-              <Info label="Genres" value={anime.genres ?? "Unknown"} />
-            </div>
+            <p className="mt-5 leading-relaxed text-purple-200">
+              {data.synopsis}
+            </p>
 
-            {anime.synopsis && (
-              <div className="mt-8 rounded-3xl bg-black/20 p-5">
-                <p className="text-sm text-purple-200">Synopsis</p>
-                <p className="mt-2 leading-relaxed text-purple-100">
-                  {anime.synopsis}
+            <div className="mt-6 space-y-2 text-sm text-purple-300">
+              <p>
+                Dub:{" "}
+                <span className="font-semibold text-white">{data.dub}</span>
+              </p>
+
+              <p>
+                Release:{" "}
+                <span className="font-semibold text-white">{data.release}</span>
+              </p>
+
+              <p>
+                Platform:{" "}
+                <span className="font-semibold text-white">
+                  {data.platform}
+                </span>
+              </p>
+
+              <p>
+                Score:{" "}
+                <span className="font-semibold text-white">{data.score}</span>
+              </p>
+
+              {data.genres && (
+                <p>
+                  Genres:{" "}
+                  <span className="font-semibold text-white">
+                    {data.genres}
+                  </span>
                 </p>
-              </div>
-            )}
-
-            {anime.notes && (
-              <div className="mt-8 rounded-3xl bg-black/20 p-5">
-                <p className="text-sm text-purple-200">Maple Notes</p>
-                <p className="mt-2 text-purple-100">{anime.notes}</p>
-              </div>
-            )}
-
-            {anime.source_url && (
-              <a
-                href={anime.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-8 inline-block rounded-xl bg-pink-500 px-5 py-3 font-bold"
-              >
-                View Original Announcement
-              </a>
-            )}
+              )}
+            </div>
           </div>
         </div>
+
+        {maple?.hype_score !== undefined ? (
+          <section className="mt-12 rounded-3xl border border-pink-300/20 bg-white/5 p-6">
+            <h2 className="text-xl font-black">Maple Intelligence</h2>
+
+            <div className="mt-5 space-y-4 text-sm text-purple-200">
+              <div className="flex justify-between gap-6">
+                <span>Hype Score</span>
+                <span className="font-bold text-white">
+                  {maple.hype_score}/100
+                </span>
+              </div>
+
+              <div className="flex justify-between gap-6">
+                <span>Audience</span>
+                <span className="font-bold text-white">
+                  {maple.audience ?? "Unknown"}
+                </span>
+              </div>
+
+              <div className="h-px bg-white/10" />
+
+              <p className="text-purple-300">
+                {maple.insight ?? "No analysis available yet."}
+              </p>
+            </div>
+          </section>
+        ) : (
+          <div className="mt-12 rounded-3xl border border-white/10 bg-white/5 p-6 text-purple-300">
+            Maple Intelligence loading...
+          </div>
+        )}
+
+        {(explain?.explanation?.length ?? 0) > 0 && (
+          <section className="mt-10 rounded-3xl border border-white/10 bg-white/5 p-6">
+            <h2 className="text-xl font-black text-white">
+              Why this anime matters
+            </h2>
+
+            <ul className="mt-4 space-y-2 text-sm text-purple-200">
+              {explain?.explanation.map((item, i) => (
+                <li key={i} className="flex gap-2">
+                  <span>*</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {recs?.length > 0 && (
+          <section className="mt-12">
+            <h2 className="text-xl font-black text-white">Similar Anime</h2>
+
+            <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-3">
+              {recs.map((a) => (
+                <a
+                  key={a.id}
+                  href={`/anime/${a.id}`}
+                  className="rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/10"
+                >
+                  <p className="text-sm font-bold text-white">{a.title}</p>
+
+                  <p className="text-xs text-purple-300">
+                    Score: {a.score}
+                  </p>
+
+                  {(a.why?.length ?? 0) > 0 && (
+                    <p className="mt-2 text-[10px] text-purple-400">
+                      {a.why?.[0]}
+                    </p>
+                  )}
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
       </section>
     </main>
-  );
-}
-
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-3xl bg-black/20 p-5">
-      <p className="text-sm text-purple-200">{label}</p>
-      <p className="mt-2 text-lg font-bold">{value}</p>
-    </div>
   );
 }

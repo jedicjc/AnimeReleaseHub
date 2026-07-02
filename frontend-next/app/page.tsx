@@ -7,6 +7,14 @@ import { SearchBar } from "@/components/SearchBar";
 import { StatsCards } from "@/components/StatsCards";
 import { TrendingNow } from "@/components/TrendingNow";
 import { getDashboard, getTrending } from "@/lib/api";
+import { API_URL } from "@/lib/config";
+
+type PersonalRecommendation = {
+  id: number;
+  title: string;
+  personal_score: number;
+  why?: string[];
+};
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -19,6 +27,20 @@ function getGreeting() {
 export default async function Home() {
   const dashboard = await getDashboard();
   const trending = await getTrending();
+  let personal: PersonalRecommendation[] = [];
+
+  try {
+    const response = await fetch(
+      `${API_URL}/maple/personal/?genres=action,fantasy`,
+      { cache: "no-store" }
+    );
+
+    if (response.ok) {
+      personal = await response.json();
+    }
+  } catch {
+    personal = [];
+  }
 
   return (
     <main className="min-h-screen bg-[#120d1c] text-white">
@@ -28,7 +50,7 @@ export default async function Home() {
         <section className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_380px]">
           <div className="rounded-[2rem] border border-white/10 bg-white/10 p-8">
             <div className="mb-4 inline-flex rounded-full border border-pink-300/30 bg-pink-300/10 px-4 py-2 text-sm text-pink-100">
-              🍁 Maple Command Center
+              Maple Command Center
             </div>
 
             <h1 className="text-4xl font-black md:text-6xl">
@@ -53,6 +75,35 @@ export default async function Home() {
           animeCount={dashboard.anime_count}
           dubCount={dashboard.dub_count}
         />
+
+        {personal.length > 0 && (
+          <section className="mt-10">
+            <h2 className="text-xl font-black text-white">
+              Recommended for You
+            </h2>
+
+            <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-3">
+              {personal.map((a) => (
+                <div
+                  key={a.id}
+                  className="rounded-xl border border-white/10 bg-white/5 p-3"
+                >
+                  <p className="font-bold text-white">{a.title}</p>
+
+                  <p className="text-xs text-purple-300">
+                    Score: {a.personal_score}
+                  </p>
+
+                  {a.why?.[0] && (
+                    <p className="mt-2 text-[10px] text-purple-400">
+                      {a.why[0]}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <ActivitySummary categoryCounts={dashboard.category_counts} />
 

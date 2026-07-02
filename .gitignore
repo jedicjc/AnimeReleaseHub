@@ -1,3 +1,7 @@
 
 # Next.js local env
 frontend-next/.env.local
+
+# Backend local env
+backend/.env
+backend/maple_memory.json

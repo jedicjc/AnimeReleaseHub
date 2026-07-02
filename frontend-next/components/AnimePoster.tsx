@@ -1,15 +1,17 @@
 import Image from "next/image";
 
 type Props = {
-  title: string;
+  title?: string | null;
   posterUrl?: string | null;
 };
 
 export function AnimePoster({ title, posterUrl }: Props) {
-  const initials = title
+  const safeTitle = title ?? "Unknown Anime";
+
+  const initials = safeTitle
     .split(" ")
     .slice(0, 2)
-    .map((w) => w[0])
+    .map((w) => w?.[0] ?? "")
     .join("")
     .toUpperCase();
 
@@ -18,15 +20,19 @@ export function AnimePoster({ title, posterUrl }: Props) {
       {posterUrl ? (
         <Image
           src={posterUrl}
-          alt={title}
+          alt={safeTitle}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-110"
         />
       ) : (
         <div className="flex h-full items-center justify-center bg-gradient-to-br from-pink-500/20 via-purple-500/10 to-blue-500/20">
           <div className="text-center">
-            <p className="text-5xl font-black text-white/90">{initials}</p>
-            <p className="mt-3 text-sm text-purple-200">{title}</p>
+            <p className="text-5xl font-black text-white/90">
+              {initials || "?"}
+            </p>
+            <p className="mt-3 text-sm text-purple-200">
+              {safeTitle}
+            </p>
           </div>
         </div>
       )}
