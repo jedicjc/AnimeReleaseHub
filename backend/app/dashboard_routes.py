@@ -20,11 +20,20 @@ def dashboard_summary():
             .all()
         )
 
+        all_articles = db.query(NewsArticle).all()
+
+        category_counts = {}
+
+        for article in all_articles:
+            category = article.category or "general"
+            category_counts[category] = category_counts.get(category, 0) + 1
+
         return {
             "news_count": news_count,
             "anime_count": anime_count,
-            "dub_count": 0,
+            "dub_count": category_counts.get("dub_update", 0),
             "latest_news": latest_news,
+            "category_counts": category_counts,
         }
     finally:
         db.close()

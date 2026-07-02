@@ -5,6 +5,7 @@ import { StatsCards } from "@/components/StatsCards";
 import { getDashboard } from "@/lib/api";
 import { DailyBrief } from "@/components/DailyBrief";
 import { SearchBar } from "@/components/SearchBar";
+import { ActivitySummary } from "@/components/ActivitySummary";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -51,7 +52,8 @@ export default async function Home() {
 
           <MaplePanel />
         </section>
-
+        
+        <ActivitySummary categoryCounts={dashboard.category_counts} />
         <NewsGrid articles={dashboard.latest_news} />
       </section>
     </main>

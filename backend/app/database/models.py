@@ -30,6 +30,7 @@ class NewsArticle(Base):
     title = Column(String, nullable=False)
     source = Column(String, nullable=False)
     url = Column(String, unique=True, nullable=False)
+    category = Column(String, default="general")
     summary = Column(Text, nullable=True)
     processed = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -7,6 +7,33 @@ from app.database.connection import SessionLocal
 from app.database.models import Anime, NewsArticle
 
 
+def classify_article(headline: str):
+    text = headline.lower()
+
+    if "second season" in text or "season 2" in text:
+        return "sequel"
+
+    if "tv anime adaptation" in text or "gets tv anime" in text:
+        return "new_adaptation"
+
+    if "trailer" in text or "promo" in text or "teaser" in text:
+        return "trailer"
+
+    if "cast" in text:
+        return "cast_update"
+
+    if "staff" in text:
+        return "staff_update"
+
+    if "dub" in text or "english dub" in text:
+        return "dub_update"
+
+    if "delayed" in text:
+        return "delay"
+
+    return "general"
+
+
 def extract_anime_title(headline: str):
     quoted_match = re.search(r"'([^']+)'", headline)
 
@@ -17,6 +44,24 @@ def extract_anime_title(headline: str):
         return "Cyberpunk: Edgerunners 2"
 
     return None
+
+
+def extract_release_info(headline: str):
+    release_season = None
+    release_year = None
+
+    seasons = ["Winter", "Spring", "Summer", "Fall"]
+
+    for season in seasons:
+        if season.lower() in headline.lower():
+            release_season = season
+            break
+
+    year_match = re.search(r"\b(20\d{2})\b", headline)
+    if year_match:
+        release_year = int(year_match.group(1))
+
+    return release_season, release_year
 
 
 def fetch_mal_articles():
@@ -30,6 +75,7 @@ def fetch_mal_articles():
     response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")
+
     articles = []
 
     for link in soup.select("a"):
@@ -53,6 +99,7 @@ def fetch_mal_articles():
                     "title": title,
                     "source": "MyAnimeList",
                     "url": href,
+                    "category": classify_article(title),
                 }
             )
 
@@ -68,7 +115,7 @@ def save_articles():
     saved_articles = 0
     skipped_articles = 0
     created_anime = 0
-    skipped_anime = 0
+    updated_anime = 0
 
     try:
         articles = fetch_mal_articles()
@@ -81,23 +128,27 @@ def save_articles():
             )
 
             if existing_article:
+                existing_article.category = article["category"]
                 skipped_articles += 1
             else:
-                db_article = NewsArticle(
-                    title=article["title"],
-                    source=article["source"],
-                    url=article["url"],
-                    summary=None,
-                    processed=False,
+                db.add(
+                    NewsArticle(
+                        title=article["title"],
+                        source=article["source"],
+                        url=article["url"],
+                        category=article["category"],
+                        summary=None,
+                        processed=False,
+                    )
                 )
-
-                db.add(db_article)
                 saved_articles += 1
 
             anime_title = extract_anime_title(article["title"])
 
             if not anime_title:
                 continue
+
+            release_season, release_year = extract_release_info(article["title"])
 
             existing_anime = (
                 db.query(Anime)
@@ -106,26 +157,35 @@ def save_articles():
             )
 
             if existing_anime:
-                skipped_anime += 1
+                existing_anime.release_season = release_season
+                existing_anime.release_year = release_year
+
+                if release_year:
+                    existing_anime.status = "upcoming"
+
+                updated_anime += 1
                 continue
 
-            db_anime = Anime(
-                title=anime_title,
-                status="announced",
-                source_url=article["url"],
-                notes=f"Created automatically from headline: {article['title']}",
+            db.add(
+                Anime(
+                    title=anime_title,
+                    status="upcoming" if release_year else "announced",
+                    release_season=release_season,
+                    release_year=release_year,
+                    source_url=article["url"],
+                    notes=f"Created automatically from headline: {article['title']}",
+                )
             )
 
-            db.add(db_anime)
             created_anime += 1
 
         db.commit()
 
-        print("Maple Scout import complete.")
-        print(f"Saved new articles: {saved_articles}")
-        print(f"Skipped duplicate articles: {skipped_articles}")
-        print(f"Created anime records: {created_anime}")
-        print(f"Skipped duplicate anime: {skipped_anime}")
+        print("\n🍁 Maple Scout Import Complete")
+        print(f"New Articles:      {saved_articles}")
+        print(f"Skipped Articles:  {skipped_articles}")
+        print(f"New Anime:         {created_anime}")
+        print(f"Updated Anime:     {updated_anime}")
 
     finally:
         db.close()

@@ -1,4 +1,5 @@
 import { NewsArticle } from "@/types/dashboard";
+import { NewsCategoryBadge } from "@/components/NewsCategoryBadge";
 
 type Props = {
   articles: NewsArticle[];
@@ -28,9 +29,14 @@ export function NewsGrid({ articles }: Props) {
             className="rounded-3xl border border-white/10 bg-black/20 p-5 transition hover:bg-white/10"
           >
             <p className="text-lg font-bold">{article.title}</p>
-            <p className="mt-3 text-sm text-purple-200">
-              {article.source}
-            </p>
+
+            <div className="mt-3 flex items-center gap-2">
+              <NewsCategoryBadge category={article.category} />
+
+              <span className="text-sm text-purple-200">
+                {article.source}
+              </span>
+            </div>
           </a>
         ))}
       </div>
