@@ -4,14 +4,18 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-load_dotenv(override=True)
+load_dotenv(override=False)
 
-from app.database.connection import engine
+from app.database.connection import (
+    engine,
+    ensure_anime_metadata_columns,
+    ensure_news_article_columns,
+)
 from app.database.models import Base
 
 from app.news_routes import router as news_router
 from app.anime_routes import router as anime_router
-from app.dashboard_routes import router as dashboard_router
+from app.routes.dashboard import router as dashboard_router
 from app.search_routes import router as search_router
 from app.featured_routes import router as featured_router
 from app.trending_routes import router as trending_router
@@ -25,6 +29,8 @@ from app.maple.trend_routes import router as trending_router
 
 # Create DB tables
 Base.metadata.create_all(bind=engine)
+ensure_anime_metadata_columns()
+ensure_news_article_columns()
 
 app = FastAPI(title="AnimeReleaseHub API")
 
