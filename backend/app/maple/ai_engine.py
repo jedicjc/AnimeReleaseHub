@@ -16,7 +16,18 @@ class MapleAIEngine:
         response = self.client.responses.create(
             model=os.getenv("MAPLE_OPENAI_MODEL", "gpt-5-mini"),
             input=prompt,
-            max_output_tokens=300,
+            max_output_tokens=800,
         )
 
-        return response.output_text.strip()
+        answer = response.output_text.strip()
+
+        if not answer:
+            status = getattr(response, "status", "unknown")
+            incomplete_details = getattr(response, "incomplete_details", None)
+
+            raise RuntimeError(
+                "OpenAI returned an empty answer "
+                f"(status={status}, incomplete_details={incomplete_details})"
+            )
+
+        return answer
