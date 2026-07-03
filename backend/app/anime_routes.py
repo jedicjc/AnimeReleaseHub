@@ -1,8 +1,15 @@
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from app.database.connection import SessionLocal
-from app.database.models import Anime
+from app.database.models import Anime, NewsArticle
+from app.maple.chat_engine import MapleChatEngine
+from app.maple.insight_engine import MapleInsightEngine
 
 router = APIRouter(prefix="/anime", tags=["Anime"])
+
+
+class AskMapleRequest(BaseModel):
+    question: str
 
 
 @router.get("/")
@@ -16,6 +23,100 @@ def list_anime():
             .all()
         )
         return anime
+    finally:
+        db.close()
+
+
+@router.get("/{anime_id}/news")
+def get_anime_news(anime_id: int):
+    db = SessionLocal()
+
+    try:
+        articles = (
+            db.query(NewsArticle)
+            .filter(NewsArticle.anime_id == anime_id)
+            .order_by(NewsArticle.created_at.desc())
+            .all()
+        )
+
+        if articles:
+            return articles
+
+        anime = db.query(Anime).filter(Anime.id == anime_id).first()
+
+        if not anime:
+            raise HTTPException(status_code=404, detail="Anime not found")
+
+        if not anime.source_url:
+            return []
+
+        return (
+            db.query(NewsArticle)
+            .filter(NewsArticle.url == anime.source_url)
+            .order_by(NewsArticle.created_at.desc())
+            .all()
+        )
+
+    finally:
+        db.close()
+
+
+@router.get("/{anime_id}/insight")
+def get_anime_insight(anime_id: int):
+    db = SessionLocal()
+
+    try:
+        anime = db.query(Anime).filter(Anime.id == anime_id).first()
+
+        if not anime:
+            return {"error": "Anime not found"}
+
+        news = (
+            db.query(NewsArticle)
+            .filter(NewsArticle.anime_id == anime_id)
+            .order_by(NewsArticle.created_at.desc())
+            .limit(5)
+            .all()
+        )
+
+        engine = MapleInsightEngine(anime=anime, news=news)
+
+        return {
+            "anime_id": anime.id,
+            "title": anime.title,
+            "summary": engine.anime_summary(),
+            "score_explanation": engine.score_explanation(),
+            "score_breakdown": engine.score_breakdown(),
+        }
+
+    finally:
+        db.close()
+
+
+@router.post("/{anime_id}/ask")
+def ask_maple(anime_id: int, request: AskMapleRequest):
+    db = SessionLocal()
+
+    try:
+        anime = db.query(Anime).filter(Anime.id == anime_id).first()
+
+        if not anime:
+            raise HTTPException(status_code=404, detail="Anime not found")
+
+        news = (
+            db.query(NewsArticle)
+            .filter(NewsArticle.anime_id == anime_id)
+            .order_by(NewsArticle.created_at.desc())
+            .limit(5)
+            .all()
+        )
+
+        engine = MapleChatEngine(anime=anime, news=news)
+
+        return {
+            "answer": engine.answer(request.question),
+        }
+
     finally:
         db.close()
 
