@@ -4,12 +4,16 @@ from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+
+load_dotenv(override=False)
 
 from app.database.connection import SessionLocal
 from app.database.models import Anime, NewsArticle
 from app.scout.config import JIKAN_DELAY, REQUEST_TIMEOUT, SCOUT_LIMIT
 from app.scout.matching import is_good_jikan_match
 from app.scout.sources import HEADERS, MAL_NEWS_URL
+from app.maple.scoring import calculate_maple_score
 from app.maple.trends import calculate_trend_score
 
 
@@ -275,21 +279,25 @@ def upsert_anime_from_article(db, article):
         None,
     )
 
-    existing = (
+    source_match = (
         db.query(Anime)
         .filter(Anime.source_url == article["url"])
         .first()
     )
 
+    title_match = (
+        db.query(Anime)
+        .filter(Anime.title == anime_title)
+        .first()
+    )
+
+    existing = title_match or source_match
+
     if not existing and pending:
         existing = pending
 
     if not existing:
-        existing = (
-            db.query(Anime)
-            .filter(Anime.title == anime_title)
-            .first()
-        )
+        existing = title_match
 
     if existing:
         existing.title = anime_title
@@ -314,11 +322,12 @@ def upsert_anime_from_article(db, article):
 
         existing.trend_score = trend_score
         apply_anime_metadata(existing, metadata)
+        existing.maple_score = calculate_maple_score(existing)
         attach_article_to_anime(db, article["url"], existing.id)
 
         return "updated"
 
-    anime = Anime(
+    new_anime = Anime(
         title=anime_title,
         status="upcoming" if release_year else "announced",
         release_season=release_season,
@@ -329,14 +338,26 @@ def upsert_anime_from_article(db, article):
         score=metadata.get("score"),
         genres=metadata.get("genres"),
         trend_score=trend_score,
+        japanese_title=metadata.get("japanese_title"),
+        anime_type=metadata.get("anime_type"),
+        episodes=metadata.get("episodes"),
+        rating=metadata.get("rating"),
+        studio=metadata.get("studio"),
+        trailer_url=metadata.get("trailer_url"),
+        members=metadata.get("members"),
+        favorites=metadata.get("favorites"),
+        rank=metadata.get("rank"),
+        popularity=metadata.get("popularity"),
+        aired_from=metadata.get("aired_from"),
+        aired_to=metadata.get("aired_to"),
         notes=f"Created automatically from headline: {article['title']}",
     )
 
-    apply_anime_metadata(anime, metadata)
-    db.add(anime)
+    db.add(new_anime)
     db.flush()
 
-    attach_article_to_anime(db, article["url"], anime.id)
+    new_anime.maple_score = calculate_maple_score(new_anime)
+    attach_article_to_anime(db, article["url"], new_anime.id)
 
     return "created"
 
