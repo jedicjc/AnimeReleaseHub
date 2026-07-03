@@ -1,8 +1,8 @@
 import os
 
-from app.maple.ai_engine import MapleAIEngine
 from app.maple.insight_engine import MapleInsightEngine
 from app.maple.prompt_builder import MaplePromptBuilder
+from app.maple.ai_engine import MapleAIEngine
 
 
 class MapleChatEngine:
@@ -18,6 +18,11 @@ class MapleChatEngine:
         self.ai_enabled = os.getenv("MAPLE_AI_ENABLED", "false").lower() == "true"
 
     def answer(self, question: str):
+        rule_answer = self.rule_based_answer(question)
+
+        if rule_answer:
+            return rule_answer
+
         if self.ai_enabled:
             try:
                 prompt = MaplePromptBuilder(
@@ -27,13 +32,13 @@ class MapleChatEngine:
 
                 return MapleAIEngine().answer(prompt)
 
-            except NotImplementedError:
-                return self.rule_based_answer(question)
+            except Exception as error:
+                print("Maple AI error:", error)
 
-            except Exception:
-                return self.rule_based_answer(question)
-
-        return self.rule_based_answer(question)
+        return (
+            "I'm still learning! Try asking about trends, scores, "
+            "recommendations, recent news, episodes, studios, or status."
+        )
 
     def rule_based_answer(self, question: str):
         q = question.lower()
@@ -42,7 +47,7 @@ class MapleChatEngine:
             return self.engine.anime_summary()
 
         if any(word in q for word in ["worth", "watch", "good"]):
-            score = getattr(self.engine.anime, "trend_score", 0) or 0
+            score = getattr(self.anime, "trend_score", 0) or 0
 
             if score >= 90:
                 return (
@@ -51,9 +56,7 @@ class MapleChatEngine:
                 )
 
             if score >= 75:
-                return (
-                    "Yes. It has solid momentum and is well worth checking out."
-                )
+                return "Yes. It has solid momentum and is well worth checking out."
 
             return (
                 "It may appeal to fans of its genre, although it isn't "
@@ -61,58 +64,40 @@ class MapleChatEngine:
             )
 
         if any(word in q for word in ["recommend", "similar", "enjoy"]):
-            genres = getattr(self.engine.anime, "genres", "") or "this genre"
+            genres = getattr(self.anime, "genres", "") or "this genre"
 
             return f"If you enjoy {genres}, this title is likely a great fit."
 
         if any(word in q for word in ["score", "rating"]):
             explanations = self.engine.score_explanation()
 
-            if explanations:
+            if isinstance(explanations, list):
                 return " ".join(explanations)
 
-            return (
-                "Maple Score is based on trend momentum, community rating, "
-                "popularity, members, favorites, trailers, and release status."
-            )
+            return explanations
 
         if "news" in q:
-            if not self.engine.news:
+            if not self.news:
                 return "No recent news is available."
 
-            latest = self.engine.news[0]
+            latest = self.news[0]
+            latest_title = getattr(latest, "title", "Untitled article")
 
             return (
-                f"There are {len(self.engine.news)} recent news articles. "
-                f"The latest is titled '{latest.title}'."
+                f"There are {len(self.news)} recent news articles. "
+                f"The latest is titled '{latest_title}'."
             )
 
         if any(word in q for word in ["story", "about", "synopsis", "plot"]):
-            synopsis = getattr(self.engine.anime, "synopsis", None)
+            synopsis = getattr(self.anime, "synopsis", None)
 
             if synopsis:
                 return synopsis
 
             return "Story information isn't available."
 
-        if any(word in q for word in ["genre", "genres"]):
-            genres = getattr(self.engine.anime, "genres", None)
-
-            if genres:
-                return f"This anime belongs to: {genres}."
-
-            return "Genre information isn't available."
-
-        if any(word in q for word in ["studio", "made", "developer", "animated"]):
-            studio = getattr(self.engine.anime, "studio", None)
-
-            if studio:
-                return f"This anime was produced by {studio}."
-
-            return "Studio information isn't available."
-
         if any(word in q for word in ["episode", "episodes"]):
-            episodes = getattr(self.engine.anime, "episodes", None)
+            episodes = getattr(self.anime, "episodes", None)
 
             if episodes:
                 return f"This series currently has {episodes} episodes."
@@ -120,15 +105,34 @@ class MapleChatEngine:
             return "Episode information isn't available."
 
         if any(word in q for word in ["status", "finished", "airing"]):
-            status = getattr(self.engine.anime, "status", None)
+            status = getattr(self.anime, "status", None)
 
             if status:
                 return f"The current release status is: {status}."
 
             return "Release status isn't available."
 
+        if any(word in q for word in ["studio", "studios", "animated", "animator"]):
+            studios = (
+                getattr(self.anime, "studios", None)
+                or getattr(self.anime, "studio", None)
+            )
+
+            if studios:
+                return f"This anime was produced by {studios}."
+
+            return "Studio information isn't available."
+
+        if any(word in q for word in ["genre", "genres"]):
+            genres = getattr(self.anime, "genres", None)
+
+            if genres:
+                return f"This anime belongs to: {genres}."
+
+            return "Genre information isn't available."
+
         if any(word in q for word in ["favorite", "favorites"]):
-            favorites = getattr(self.engine.anime, "favorites", None)
+            favorites = getattr(self.anime, "favorites", None)
 
             if favorites:
                 return (
@@ -138,7 +142,4 @@ class MapleChatEngine:
 
             return "Favorite count isn't available."
 
-        return (
-            "I'm still learning! Try asking about trends, "
-            "scores, recommendations, or recent news."
-        )
+        return None
