@@ -23,7 +23,7 @@ class MapleChatEngine:
         if rule_answer:
             return rule_answer
 
-        print("MAPLE_AI_ENABLED:", self.ai_enabled)
+        print(f"MAPLE_AI_ENABLED: {self.ai_enabled}")
 
         if self.ai_enabled:
             try:
@@ -35,7 +35,7 @@ class MapleChatEngine:
                 return MapleAIEngine().answer(prompt)
 
             except Exception as error:
-                print("Maple AI error:", repr(error))
+                print(f"Maple AI error: {repr(error)}")
 
         return (
             "I'm still learning! Try asking about trends, scores, "
