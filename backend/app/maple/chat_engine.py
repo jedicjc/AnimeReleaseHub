@@ -23,6 +23,8 @@ class MapleChatEngine:
         if rule_answer:
             return rule_answer
 
+        print("MAPLE_AI_ENABLED:", self.ai_enabled)
+
         if self.ai_enabled:
             try:
                 prompt = MaplePromptBuilder(
@@ -33,7 +35,7 @@ class MapleChatEngine:
                 return MapleAIEngine().answer(prompt)
 
             except Exception as error:
-                print("Maple AI error:", error)
+                print("Maple AI error:", repr(error))
 
         return (
             "I'm still learning! Try asking about trends, scores, "
@@ -88,7 +90,14 @@ class MapleChatEngine:
                 f"The latest is titled '{latest_title}'."
             )
 
-        if any(word in q for word in ["story", "about", "synopsis", "plot"]):
+        if any(phrase in q for phrase in [
+            "what's the story",
+            "what is the story",
+            "synopsis",
+            "plot summary",
+            "what is it about",
+            "what's it about",
+        ]):
             synopsis = getattr(self.anime, "synopsis", None)
 
             if synopsis:
