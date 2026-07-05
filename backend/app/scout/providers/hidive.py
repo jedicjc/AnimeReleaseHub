@@ -30,12 +30,15 @@ class HidiveProvider:
         seen_urls = set()
 
         for sitemap_url in self.SITEMAP_URLS:
-            response = requests.get(
-                sitemap_url,
-                headers=HEADERS,
-                timeout=REQUEST_TIMEOUT,
-                allow_redirects=True,
-            )
+            try:
+                response = requests.get(
+                    sitemap_url,
+                    headers=HEADERS,
+                    timeout=REQUEST_TIMEOUT,
+                    allow_redirects=True,
+                )
+            except requests.RequestException:
+                continue
 
             if response.status_code != 200:
                 continue
@@ -114,53 +117,60 @@ class HidiveProvider:
             "fallback_used": False,
             "fallback_stage": None,
             "entries_found": 0,
+            "error": None,
         }
 
-        response = requests.get(
-            self.FEED_URL,
-            headers=HEADERS,
-            timeout=REQUEST_TIMEOUT,
-            allow_redirects=True,
-        )
-        diagnostics["final_url"] = response.url
-        diagnostics["status_code"] = response.status_code
-        diagnostics["content_type"] = response.headers.get("content-type")
-
-        feed = feedparser.parse(response.content)
-        diagnostics["bozo"] = bool(getattr(feed, "bozo", False))
-
-        items = [
-            self._build_item(
-                title=entry.get("title"),
-                url=entry.get("link"),
-                summary=entry.get("summary", ""),
-                published_at=entry.get("published"),
+        try:
+            response = requests.get(
+                self.FEED_URL,
+                headers=HEADERS,
+                timeout=REQUEST_TIMEOUT,
+                allow_redirects=True,
             )
-            for entry in feed.entries[:limit]
-        ]
+            diagnostics["final_url"] = response.url
+            diagnostics["status_code"] = response.status_code
+            diagnostics["content_type"] = response.headers.get("content-type")
 
-        if items:
-            diagnostics["entries_found"] = len(items)
-            return {"items": items, "diagnostics": diagnostics}
+            feed = feedparser.parse(response.content)
+            diagnostics["bozo"] = bool(getattr(feed, "bozo", False))
 
-        diagnostics["fallback_used"] = True
+            items = [
+                self._build_item(
+                    title=entry.get("title"),
+                    url=entry.get("link"),
+                    summary=entry.get("summary", ""),
+                    published_at=entry.get("published"),
+                )
+                for entry in feed.entries[:limit]
+            ]
 
-        sitemap_items, sitemap_response = self._fetch_sitemap_items(limit)
+            if items:
+                diagnostics["entries_found"] = len(items)
+                return {"items": items, "diagnostics": diagnostics}
 
-        if sitemap_items:
-            diagnostics["fallback_stage"] = "sitemap"
-            diagnostics["entries_found"] = len(sitemap_items)
-            if sitemap_response is not None:
-                diagnostics["final_url"] = sitemap_response.url
-                diagnostics["status_code"] = sitemap_response.status_code
-                diagnostics["content_type"] = sitemap_response.headers.get("content-type")
-            return {"items": sitemap_items, "diagnostics": diagnostics}
+            diagnostics["fallback_used"] = True
 
-        html_items, html_response = self._fetch_html_items(limit)
-        diagnostics["fallback_stage"] = "html"
-        diagnostics["entries_found"] = len(html_items)
-        diagnostics["final_url"] = html_response.url
-        diagnostics["status_code"] = html_response.status_code
-        diagnostics["content_type"] = html_response.headers.get("content-type")
+            sitemap_items, sitemap_response = self._fetch_sitemap_items(limit)
 
-        return {"items": html_items, "diagnostics": diagnostics}
+            if sitemap_items:
+                diagnostics["fallback_stage"] = "sitemap"
+                diagnostics["entries_found"] = len(sitemap_items)
+                if sitemap_response is not None:
+                    diagnostics["final_url"] = sitemap_response.url
+                    diagnostics["status_code"] = sitemap_response.status_code
+                    diagnostics["content_type"] = sitemap_response.headers.get(
+                        "content-type"
+                    )
+                return {"items": sitemap_items, "diagnostics": diagnostics}
+
+            html_items, html_response = self._fetch_html_items(limit)
+            diagnostics["fallback_stage"] = "html"
+            diagnostics["entries_found"] = len(html_items)
+            diagnostics["final_url"] = html_response.url
+            diagnostics["status_code"] = html_response.status_code
+            diagnostics["content_type"] = html_response.headers.get("content-type")
+
+            return {"items": html_items, "diagnostics": diagnostics}
+        except Exception as error:
+            diagnostics["error"] = repr(error)
+            return {"items": [], "diagnostics": diagnostics}

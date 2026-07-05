@@ -149,7 +149,17 @@ class ScoutImporter:
         duplicates = 0
 
         try:
-            result = provider.fetch_news(limit=limit)
+            try:
+                result = provider.fetch_news(limit=limit)
+            except Exception as error:
+                return {
+                    "provider": "crunchyroll",
+                    "fetched": 0,
+                    "inserted": 0,
+                    "duplicates": 0,
+                    "error": repr(error),
+                }
+
             items = result.get("items", [])
             diagnostics = result.get("diagnostics", {})
 
@@ -181,7 +191,17 @@ class ScoutImporter:
         duplicates = 0
 
         try:
-            result = provider.fetch_news(limit=limit)
+            try:
+                result = provider.fetch_news(limit=limit)
+            except Exception as error:
+                return {
+                    "provider": "hidive",
+                    "fetched": 0,
+                    "inserted": 0,
+                    "duplicates": 0,
+                    "error": repr(error),
+                }
+
             items = result.get("items", [])
             diagnostics = result.get("diagnostics", {})
 
