@@ -28,10 +28,13 @@ class HidiveProvider:
 
     def _extract_sitemap_urls(self, xml_text):
         root = ET.fromstring(xml_text)
+        urls = []
 
         for node in root.iter():
             if node.tag.endswith("loc") and node.text:
-                yield node.text.strip()
+                urls.append(node.text.strip())
+
+        return urls
 
     def _fetch_sitemap_items(self, limit):
         items = []
@@ -52,11 +55,11 @@ class HidiveProvider:
                 continue
 
             try:
-                urls = self._extract_sitemap_urls(response.text)
+                sitemap_urls = self._extract_sitemap_urls(response.text)
             except ET.ParseError:
                 continue
 
-            for url in urls:
+            for url in sitemap_urls:
                 parsed = urlparse(url)
 
                 if "hidive.com" not in parsed.netloc:
