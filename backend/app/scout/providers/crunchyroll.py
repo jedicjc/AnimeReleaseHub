@@ -1,3 +1,4 @@
+import re
 import xml.etree.ElementTree as ET
 from urllib.parse import urljoin, urlparse
 
@@ -25,6 +26,78 @@ class CrunchyrollProvider:
             "summary": summary,
             "published_at": published_at,
         }
+
+    def _title_from_url(self, url):
+        slug = urlparse(url).path.rstrip("/").split("/")[-1]
+
+        if not slug:
+            return url
+
+        return slug.replace("-", " ").replace("_", " ").strip()
+
+    def _looks_like_article_url(self, url):
+        parsed = urlparse(url)
+        path = parsed.path.rstrip("/")
+
+        if "crunchyroll.com" not in parsed.netloc:
+            return False
+
+        if not path.startswith("/news"):
+            return False
+
+        if path in {"", "/news", "/news/rss"}:
+            return False
+
+        if any(
+            path.endswith(ext)
+            for ext in (".css", ".js", ".png", ".jpg", ".jpeg", ".svg", ".webp", ".ico")
+        ):
+            return False
+
+        return True
+
+    def _clean_candidate_url(self, raw_url):
+        return raw_url.strip().strip("\"'").rstrip("),")
+
+    def _collect_html_candidates(self, html_text, base_url):
+        soup = BeautifulSoup(html_text, "html.parser")
+        candidates = []
+        seen = set()
+
+        def add_candidate(raw_url, raw_title=""):
+            if not raw_url:
+                return
+
+            url = urljoin(base_url, self._clean_candidate_url(raw_url))
+
+            if not self._looks_like_article_url(url):
+                return
+
+            if url in seen:
+                return
+
+            seen.add(url)
+            title = (raw_title or "").strip() or self._title_from_url(url)
+            candidates.append(self._build_item(title=title, url=url))
+
+        for link in soup.select("a[href], link[href]"):
+            href = link.get("href")
+            title = (
+                link.get_text(" ", strip=True)
+                or link.get("title")
+                or link.get("aria-label")
+                or link.get("data-title")
+                or ""
+            )
+            add_candidate(href, title)
+
+        for match in re.findall(r'https?://[^"\'>\s]+', html_text):
+            add_candidate(match)
+
+        for match in re.findall(r'/news/[^"\'>\s]+', html_text):
+            add_candidate(match)
+
+        return candidates
 
     def _extract_sitemap_urls(self, xml_text):
         root = ET.fromstring(xml_text)
@@ -87,35 +160,7 @@ class CrunchyrollProvider:
             timeout=REQUEST_TIMEOUT,
             allow_redirects=True,
         )
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        items = []
-        seen_urls = set()
-
-        for link in soup.select("article a[href], h1 a[href], h2 a[href], h3 a[href]"):
-            href = link.get("href")
-            title = link.get_text(" ", strip=True)
-
-            if not href or len(title) < 8:
-                continue
-
-            url = urljoin(self.NEWS_URL, href)
-            parsed = urlparse(url)
-
-            if "crunchyroll.com" not in parsed.netloc:
-                continue
-
-            if "/news" not in parsed.path:
-                continue
-
-            if url in seen_urls:
-                continue
-
-            seen_urls.add(url)
-            items.append(self._build_item(title=title, url=url))
-
-            if len(items) >= limit:
-                break
+        items = self._collect_html_candidates(response.text, response.url)[:limit]
 
         return items, response
 
