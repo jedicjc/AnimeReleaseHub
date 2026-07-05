@@ -1,10 +1,13 @@
+from app.scout.sources import HEADERS
+
+
 class HidiveProvider:
     FEED_URL = "https://news.hidive.com/rss"
 
     def fetch_news(self, limit=25):
         import feedparser
 
-        feed = feedparser.parse(self.FEED_URL)
+        feed = feedparser.parse(self.FEED_URL, request_headers=HEADERS)
 
         return [
             {

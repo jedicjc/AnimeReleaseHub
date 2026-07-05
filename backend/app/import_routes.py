@@ -39,22 +39,12 @@ def import_jikan_season(pages: int = 2, limit: int = 25):
 
 @router.post("/crunchyroll")
 def import_crunchyroll(limit: int = 25):
-    imported = scout.import_crunchyroll_news(limit=limit)
-
-    return {
-        "provider": "crunchyroll",
-        "imported": imported,
-    }
+    return scout.import_crunchyroll_news(limit=limit)
 
 
 @router.post("/hidive")
 def import_hidive(limit: int = 25):
-    imported = scout.import_hidive_news(limit=limit)
-
-    return {
-        "provider": "hidive",
-        "imported": imported,
-    }
+    return scout.import_hidive_news(limit=limit)
 
 
 @router.post("/run")

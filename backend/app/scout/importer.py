@@ -75,7 +75,7 @@ class ScoutImporter:
         existing = db.query(NewsArticle).filter(NewsArticle.url == url).first()
 
         if existing:
-            return existing
+            return None
 
         matcher = ScoutMatcher(db)
 
@@ -145,7 +145,8 @@ class ScoutImporter:
     def import_crunchyroll_news(self, limit=25):
         provider = CrunchyrollProvider()
         db = SessionLocal()
-        imported = 0
+        inserted = 0
+        duplicates = 0
 
         try:
             items = provider.fetch_news(limit=limit)
@@ -155,10 +156,17 @@ class ScoutImporter:
                 article = self.save_news_article(db, data)
 
                 if article:
-                    imported += 1
+                    inserted += 1
+                else:
+                    duplicates += 1
 
             db.commit()
-            return imported
+            return {
+                "provider": "crunchyroll",
+                "fetched": len(items),
+                "inserted": inserted,
+                "duplicates": duplicates,
+            }
 
         finally:
             db.close()
@@ -166,7 +174,8 @@ class ScoutImporter:
     def import_hidive_news(self, limit=25):
         provider = HidiveProvider()
         db = SessionLocal()
-        imported = 0
+        inserted = 0
+        duplicates = 0
 
         try:
             items = provider.fetch_news(limit=limit)
@@ -176,10 +185,17 @@ class ScoutImporter:
                 article = self.save_news_article(db, data)
 
                 if article:
-                    imported += 1
+                    inserted += 1
+                else:
+                    duplicates += 1
 
             db.commit()
-            return imported
+            return {
+                "provider": "hidive",
+                "fetched": len(items),
+                "inserted": inserted,
+                "duplicates": duplicates,
+            }
 
         finally:
             db.close()
