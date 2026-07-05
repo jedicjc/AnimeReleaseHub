@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.sources.anime_importer import import_current_season, import_top_anime
+from app.sources.news_importer import import_crunchyroll_news
 
 
 router = APIRouter(prefix="/imports", tags=["Imports"])
@@ -22,5 +23,15 @@ def import_jikan_season(pages: int = 2):
 
     return {
         "source": "jikan_current_season",
+        "imported": imported,
+    }
+
+
+@router.post("/news/crunchyroll")
+def import_crunchyroll(limit: int = 25):
+    imported = import_crunchyroll_news(limit=limit)
+
+    return {
+        "source": "crunchyroll_news",
         "imported": imported,
     }
