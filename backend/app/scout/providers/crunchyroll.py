@@ -1,3 +1,4 @@
+import xml.etree.ElementTree as ET
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -25,6 +26,13 @@ class CrunchyrollProvider:
             "published_at": published_at,
         }
 
+    def _extract_sitemap_urls(self, xml_text):
+        root = ET.fromstring(xml_text)
+
+        for node in root.iter():
+            if node.tag.endswith("loc") and node.text:
+                yield node.text.strip()
+
     def _fetch_sitemap_items(self, limit):
         items = []
         seen_urls = set()
@@ -43,15 +51,12 @@ class CrunchyrollProvider:
             if response.status_code != 200:
                 continue
 
-            soup = BeautifulSoup(response.text, "xml")
+            try:
+                urls = self._extract_sitemap_urls(response.text)
+            except ET.ParseError:
+                continue
 
-            for node in soup.find_all("url"):
-                loc = node.find("loc")
-
-                if not loc or not loc.text:
-                    continue
-
-                url = loc.text.strip()
+            for url in urls:
                 parsed = urlparse(url)
 
                 if "crunchyroll.com" not in parsed.netloc:
