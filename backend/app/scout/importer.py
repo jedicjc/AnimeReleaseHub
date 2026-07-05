@@ -149,7 +149,9 @@ class ScoutImporter:
         duplicates = 0
 
         try:
-            items = provider.fetch_news(limit=limit)
+            result = provider.fetch_news(limit=limit)
+            items = result.get("items", [])
+            diagnostics = result.get("diagnostics", {})
 
             for item in items:
                 data = self.normalizer.normalize_news(item)
@@ -166,6 +168,7 @@ class ScoutImporter:
                 "fetched": len(items),
                 "inserted": inserted,
                 "duplicates": duplicates,
+                "diagnostics": diagnostics,
             }
 
         finally:
@@ -178,7 +181,9 @@ class ScoutImporter:
         duplicates = 0
 
         try:
-            items = provider.fetch_news(limit=limit)
+            result = provider.fetch_news(limit=limit)
+            items = result.get("items", [])
+            diagnostics = result.get("diagnostics", {})
 
             for item in items:
                 data = self.normalizer.normalize_news(item)
@@ -195,6 +200,7 @@ class ScoutImporter:
                 "fetched": len(items),
                 "inserted": inserted,
                 "duplicates": duplicates,
+                "diagnostics": diagnostics,
             }
 
         finally:
