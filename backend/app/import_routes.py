@@ -1,38 +1,62 @@
 from fastapi import APIRouter
 
-from app.sources.anime_importer import import_current_season, import_top_anime
+from app.scout.importer import ScoutImporter
+from app.scout.scout_engine import ScoutEngine
 
 
-router = APIRouter(prefix="/imports", tags=["Imports"])
+router = APIRouter(prefix="/imports", tags=["Scout Imports"])
+scout = ScoutImporter()
+engine = ScoutEngine()
 
 
 @router.post("/jikan/top")
-def import_jikan_top(pages: int = 3):
-    imported = import_top_anime(pages=pages)
+def import_jikan_top(pages: int = 3, limit: int = 25):
+    imported = scout.import_jikan_top(
+        pages=pages,
+        limit=limit,
+    )
 
     return {
-        "source": "jikan_top",
+        "provider": "jikan",
+        "type": "top",
         "imported": imported,
     }
 
 
 @router.post("/jikan/season")
-def import_jikan_season(pages: int = 2):
-    imported = import_current_season(pages=pages)
+def import_jikan_season(pages: int = 2, limit: int = 25):
+    imported = scout.import_jikan_season(
+        pages=pages,
+        limit=limit,
+    )
 
     return {
-        "source": "jikan_current_season",
+        "provider": "jikan",
+        "type": "season",
         "imported": imported,
     }
 
 
-@router.post("/news/crunchyroll")
+@router.post("/crunchyroll")
 def import_crunchyroll(limit: int = 25):
-    from app.sources.news_importer import import_crunchyroll_news
-
-    imported = import_crunchyroll_news(limit=limit)
+    imported = scout.import_crunchyroll_news(limit=limit)
 
     return {
-        "source": "crunchyroll_news",
+        "provider": "crunchyroll",
         "imported": imported,
     }
+
+
+@router.post("/hidive")
+def import_hidive(limit: int = 25):
+    imported = scout.import_hidive_news(limit=limit)
+
+    return {
+        "provider": "hidive",
+        "imported": imported,
+    }
+
+
+@router.post("/run")
+def run_scout():
+    return engine.run()
