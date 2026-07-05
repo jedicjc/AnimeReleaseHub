@@ -5,3 +5,13 @@ frontend-next/.env.local
 # Backend local env
 backend/.env
 backend/maple_memory.json
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Local databases
+*.db
+
+# OS / editor noise
+.DS_Store

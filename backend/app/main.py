@@ -18,6 +18,7 @@ from app.anime_routes import router as anime_router
 from app.routes.dashboard import router as dashboard_router
 from app.search_routes import router as search_router
 from app.featured_routes import router as featured_router
+from app.import_routes import router as import_router
 from app.trending_routes import router as trending_router
 from app.maple.routes import router as maple_router
 from app.maple.recommendation_routes import router as rec_router
@@ -68,6 +69,7 @@ app.include_router(anime_router)
 app.include_router(dashboard_router)
 app.include_router(search_router)
 app.include_router(featured_router)
+app.include_router(import_router)
 app.include_router(trending_router)
 app.include_router(maple_router)
 app.include_router(rec_router)

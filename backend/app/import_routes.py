@@ -1,0 +1,26 @@
+from fastapi import APIRouter
+
+from app.sources.anime_importer import import_current_season, import_top_anime
+
+
+router = APIRouter(prefix="/imports", tags=["Imports"])
+
+
+@router.post("/jikan/top")
+def import_jikan_top(pages: int = 3):
+    imported = import_top_anime(pages=pages)
+
+    return {
+        "source": "jikan_top",
+        "imported": imported,
+    }
+
+
+@router.post("/jikan/season")
+def import_jikan_season(pages: int = 2):
+    imported = import_current_season(pages=pages)
+
+    return {
+        "source": "jikan_current_season",
+        "imported": imported,
+    }
