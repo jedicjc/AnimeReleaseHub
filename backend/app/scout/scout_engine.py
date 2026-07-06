@@ -1,35 +1,42 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from app.scout.importer import ScoutImporter
+from app.scout.status import ScoutStatus
 
 
 class ScoutEngine:
     def __init__(self):
         self.importer = ScoutImporter()
-
-    def _safe_run(self, name, func):
-        try:
-            return func()
-        except Exception as error:
-            return {
-                "provider": name,
-                "error": repr(error),
-            }
+        self.status = ScoutStatus()
 
     def run(self):
-        return {
-            "jikan_top": self._safe_run(
-                "jikan_top",
-                self.importer.import_jikan_top,
-            ),
-            "jikan_season": self._safe_run(
-                "jikan_season",
-                self.importer.import_jikan_season,
-            ),
-            "crunchyroll": self._safe_run(
-                "crunchyroll",
-                self.importer.import_crunchyroll_news,
-            ),
-            "hidive": self._safe_run(
-                "hidive",
-                self.importer.import_hidive_news,
-            ),
+        jobs = {
+            "jikan_top": lambda: self.importer.import_jikan_top(),
+            "jikan_season": lambda: self.importer.import_jikan_season(),
+            "crunchyroll": lambda: self.importer.import_crunchyroll_news(),
+            "hidive": lambda: self.importer.import_hidive_news(),
         }
+
+        results = {}
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = {
+                executor.submit(job): name
+                for name, job in jobs.items()
+            }
+
+            for future in as_completed(futures):
+                name = futures[future]
+
+                try:
+                    result = future.result()
+                except Exception as exc:
+                    result = {
+                        "status": "error",
+                        "message": str(exc),
+                    }
+
+                results[name] = result
+                self.status.update(name, result)
+
+        return results

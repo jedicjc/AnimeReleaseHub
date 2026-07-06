@@ -50,3 +50,8 @@ def import_hidive(limit: int = 25):
 @router.post("/run")
 def run_scout():
     return engine.run()
+
+
+@router.get("/status")
+def scout_status():
+    return engine.status.snapshot()
