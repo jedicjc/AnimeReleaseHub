@@ -18,6 +18,14 @@ class ScoutMatcher:
     def __init__(self, db):
         self.db = db
 
+    def anime_titles(self, anime):
+        return [
+            getattr(anime, "title", None),
+            getattr(anime, "title_english", None),
+            getattr(anime, "japanese_title", None),
+            getattr(anime, "title_japanese", None),
+        ]
+
     def find_anime_for_news(self, title: str, summary: str = ""):
         search_text = clean_text(f"{title} {summary}")
 
@@ -30,13 +38,7 @@ class ScoutMatcher:
         best_score = 0
 
         for anime in anime_list:
-            possible_titles = [
-                getattr(anime, "title", None),
-                getattr(anime, "title_english", None),
-                getattr(anime, "title_japanese", None),
-            ]
-
-            for possible_title in possible_titles:
+            for possible_title in self.anime_titles(anime):
                 cleaned_title = clean_text(possible_title)
 
                 if not cleaned_title:

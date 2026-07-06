@@ -72,17 +72,24 @@ class ScoutImporter:
         if not url:
             return None
 
-        existing = db.query(NewsArticle).filter(NewsArticle.url == url).first()
-
-        if existing:
-            return None
-
         matcher = ScoutMatcher(db)
 
         matched_anime = matcher.find_anime_for_news(
             title=data.get("title", ""),
             summary=data.get("summary", ""),
         )
+
+        existing = db.query(NewsArticle).filter(NewsArticle.url == url).first()
+
+        if existing:
+            for field, value in data.items():
+                if hasattr(existing, field) and value is not None:
+                    setattr(existing, field, value)
+
+            if matched_anime and hasattr(existing, "anime_id") and not existing.anime_id:
+                existing.anime_id = matched_anime.id
+
+            return existing
 
         article = NewsArticle()
 
@@ -165,9 +172,14 @@ class ScoutImporter:
 
             for item in items:
                 data = self.normalizer.normalize_news(item)
+                existing = (
+                    db.query(NewsArticle)
+                    .filter(NewsArticle.url == data.get("url"))
+                    .first()
+                )
                 article = self.save_news_article(db, data)
 
-                if article:
+                if article and not existing:
                     inserted += 1
                 else:
                     duplicates += 1
@@ -207,9 +219,14 @@ class ScoutImporter:
 
             for item in items:
                 data = self.normalizer.normalize_news(item)
+                existing = (
+                    db.query(NewsArticle)
+                    .filter(NewsArticle.url == data.get("url"))
+                    .first()
+                )
                 article = self.save_news_article(db, data)
 
-                if article:
+                if article and not existing:
                     inserted += 1
                 else:
                     duplicates += 1

@@ -1,15 +1,26 @@
+from typing import List, Optional
+
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.database.connection import SessionLocal
 from app.database.models import Anime, NewsArticle
 from app.maple.chat_engine import MapleChatEngine
+from app.maple.comparison_engine import MapleComparisonEngine
 from app.maple.insight_engine import MapleInsightEngine
+from app.scout.matcher import ScoutMatcher
 
 router = APIRouter(prefix="/anime", tags=["Anime"])
 
 
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
 class AskMapleRequest(BaseModel):
     question: str
+    history: List[ChatMessage] = Field(default_factory=list)
+    summary: Optional[str] = None
 
 
 @router.get("/")
@@ -46,6 +57,31 @@ def get_anime_news(anime_id: int):
 
         if not anime:
             raise HTTPException(status_code=404, detail="Anime not found")
+
+        matcher = ScoutMatcher(db)
+        fallback_titles = {
+            title.strip().lower()
+            for title in matcher.anime_titles(anime)
+            if title and title.strip()
+        }
+
+        if fallback_titles:
+            related_articles = []
+            unmatched_articles = (
+                db.query(NewsArticle)
+                .filter(NewsArticle.anime_id.is_(None))
+                .order_by(NewsArticle.created_at.desc())
+                .all()
+            )
+
+            for article in unmatched_articles:
+                article_text = f"{article.title or ''} {article.summary or ''}".lower()
+
+                if any(title in article_text for title in fallback_titles):
+                    related_articles.append(article)
+
+            if related_articles:
+                return related_articles
 
         if not anime.source_url:
             return []
@@ -111,7 +147,14 @@ def ask_maple(anime_id: int, request: AskMapleRequest):
             .all()
         )
 
-        engine = MapleChatEngine(anime=anime, news=news)
+        comparison_engine = MapleComparisonEngine(db)
+        engine = MapleChatEngine(
+            anime=anime,
+            news=news,
+            history=request.history,
+            summary=request.summary,
+            comparison_engine=comparison_engine,
+        )
 
         return {
             "answer": engine.answer(request.question),
