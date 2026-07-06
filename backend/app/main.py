@@ -12,6 +12,7 @@ from app.database.connection import (
     engine,
     ensure_anime_metadata_columns,
     ensure_news_article_columns,
+    ensure_news_intelligence_columns,
 )
 from app.database.models import Base
 
@@ -35,6 +36,7 @@ from app.scout.scheduler import ScoutScheduler
 Base.metadata.create_all(bind=engine)
 ensure_anime_metadata_columns()
 ensure_news_article_columns()
+ensure_news_intelligence_columns()
 
 
 @asynccontextmanager

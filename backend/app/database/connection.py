@@ -107,3 +107,38 @@ def ensure_news_article_columns():
             connection.execute(
                 text(f'ALTER TABLE news_articles ADD COLUMN "{name}" {spec}')
             )
+
+
+def ensure_news_intelligence_columns():
+    inspector = inspect(engine)
+
+    if "news_articles" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("news_articles")
+    }
+
+    column_specs = {
+        "intelligence_category": "VARCHAR",
+        "intelligence_importance": "INTEGER",
+        "intelligence_event": "VARCHAR",
+        "intelligence_anime": "VARCHAR",
+        "intelligence_summary": "TEXT",
+    }
+
+    missing_columns = [
+        (name, spec)
+        for name, spec in column_specs.items()
+        if name not in existing_columns
+    ]
+
+    if not missing_columns:
+        return
+
+    with engine.begin() as connection:
+        for name, spec in missing_columns:
+            connection.execute(
+                text(f'ALTER TABLE news_articles ADD COLUMN "{name}" {spec}')
+            )

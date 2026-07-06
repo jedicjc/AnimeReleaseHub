@@ -1,6 +1,7 @@
 from app.database.connection import SessionLocal
 from app.database.models import Anime, NewsArticle
 from app.maple.scoring import calculate_maple_score
+from app.scout.intelligence import ScoutIntelligence
 from app.scout.matcher import ScoutMatcher
 from app.scout.normalizer import ScoutNormalizer
 from app.scout.providers.crunchyroll import CrunchyrollProvider
@@ -10,6 +11,7 @@ from app.scout.providers.jikan import JikanProvider
 
 class ScoutImporter:
     def __init__(self):
+        self.intelligence = ScoutIntelligence()
         self.normalizer = ScoutNormalizer()
 
     def upsert_anime(self, db, data):
@@ -99,6 +101,14 @@ class ScoutImporter:
 
         if matched_anime and hasattr(article, "anime_id"):
             article.anime_id = matched_anime.id
+
+        intel = self.intelligence.analyze_article(article)
+
+        article.intelligence_category = intel.get("category")
+        article.intelligence_importance = intel.get("importance")
+        article.intelligence_event = intel.get("event")
+        article.intelligence_anime = intel.get("anime")
+        article.intelligence_summary = intel.get("summary")
 
         db.add(article)
         return article
