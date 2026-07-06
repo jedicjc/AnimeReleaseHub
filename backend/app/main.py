@@ -1,4 +1,6 @@
+import asyncio
 import os
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -27,13 +29,26 @@ from app.maple.explanation_routes import router as explain_router
 from app.maple.personalization_routes import router as personal_router
 from app.maple.chat_routes import router as chat_router
 from app.maple.trend_routes import router as trending_router
+from app.scout.scheduler import ScoutScheduler
 
 # Create DB tables
 Base.metadata.create_all(bind=engine)
 ensure_anime_metadata_columns()
 ensure_news_article_columns()
 
-app = FastAPI(title="AnimeReleaseHub API")
+
+@asynccontextmanager
+async def lifespan(app):
+    scheduler = ScoutScheduler()
+
+    asyncio.create_task(
+        scheduler.run_forever()
+    )
+
+    yield
+
+
+app = FastAPI(title="AnimeReleaseHub API", lifespan=lifespan)
 
 
 def get_cors_origins():
