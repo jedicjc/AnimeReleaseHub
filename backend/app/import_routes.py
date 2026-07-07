@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.scout.importer import ScoutImporter
+from app.scout.provider_registry import provider_health
 from app.scout.scout_engine import ScoutEngine
 
 
@@ -54,4 +55,4 @@ def run_scout():
 
 @router.get("/status")
 def scout_status():
-    return engine.status.snapshot()
+    return provider_health()

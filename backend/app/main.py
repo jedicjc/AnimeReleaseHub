@@ -31,6 +31,7 @@ from app.maple.personalization_routes import router as personal_router
 from app.maple.chat_routes import router as chat_router
 from app.maple.trend_routes import router as trending_router
 from app.scout.scheduler import ScoutScheduler
+from app.scout_routes import router as scout_router
 
 # Create DB tables
 Base.metadata.create_all(bind=engine)
@@ -95,6 +96,7 @@ app.include_router(explain_router)
 app.include_router(personal_router)
 app.include_router(chat_router)
 app.include_router(trending_router)
+app.include_router(scout_router)
 
 @app.get("/")
 def root():

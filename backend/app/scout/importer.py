@@ -20,6 +20,9 @@ class ScoutImporter:
         self.intelligence = ScoutIntelligence()
         self.normalizer = ScoutNormalizer()
 
+    def get_db(self):
+        return SessionLocal()
+
     def upsert_anime(self, db, data):
         mal_id = data.get("mal_id")
         title = data.get("title")
