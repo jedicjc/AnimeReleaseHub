@@ -1,18 +1,25 @@
+from app.scout.article_classifier import (
+    CATEGORY_IMPORTANCE_BONUS,
+    ScoutCategory,
+    normalize_category,
+)
+
+
 def category_weight(category: str | None) -> int:
-    if category == "trailer":
-        return 25
-    if category == "sequel":
-        return 22
-    if category == "new_adaptation":
+    scout_category = normalize_category(category)
+
+    if scout_category in CATEGORY_IMPORTANCE_BONUS:
+        return CATEGORY_IMPORTANCE_BONUS[scout_category]
+    if scout_category == ScoutCategory.NEW_ANIME:
         return 20
-    if category == "cast_update":
+    if scout_category == ScoutCategory.CASTING:
         return 12
-    if category == "staff_update":
+    if scout_category == ScoutCategory.RELEASE:
+        return 18
+    if scout_category in {ScoutCategory.MANGA, ScoutCategory.GAME}:
         return 10
-    if category == "dub_update":
-        return 8
-    if category == "delay":
-        return -10
+    if scout_category == ScoutCategory.MERCH:
+        return 6
 
     return 5
 

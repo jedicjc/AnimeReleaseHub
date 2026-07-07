@@ -143,6 +143,7 @@ def trending_anime():
             results.append({
                 "id": a.id,
                 "title": a.title,
+                "title_english": getattr(a, "title_english", None),
                 "poster_url": a.poster_url,
                 "score": a.score,
                 "trend_score": score,

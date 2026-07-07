@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { API_URL } from "@/lib/config";
+import { getAnimeDisplayTitle } from "@/lib/anime";
 
 type Anime = {
   id: number;
   title: string;
+  title_english?: string | null;
   trend_score: number;
   movement?: string;
   spike_label?: string;
@@ -72,7 +74,7 @@ export function TrendingNow({ anime: initialData }: { anime: Anime[] }) {
           >
             <div className="flex items-center justify-between">
               <div className="font-bold">
-                #{index + 1} {item.title}
+                #{index + 1} {getAnimeDisplayTitle(item)}
               </div>
 
               <div className="text-xs text-purple-300">

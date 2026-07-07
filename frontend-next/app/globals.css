@@ -24,3 +24,43 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes mapleFloat {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.maple-float {
+  animation: mapleFloat 6s ease-in-out infinite;
+}
+
+@keyframes premiumBlob {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate3d(24px, -28px, 0) scale(1.08);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.premium-blob {
+  animation: premiumBlob 14s ease-in-out infinite;
+}
+
+.premium-blob-slow {
+  animation: premiumBlob 18s ease-in-out infinite reverse;
+}

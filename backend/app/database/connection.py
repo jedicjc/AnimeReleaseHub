@@ -46,6 +46,8 @@ def ensure_anime_metadata_columns():
     }
 
     column_specs = {
+        "mal_id": "INTEGER",
+        "title_english": "TEXT",
         "japanese_title": "TEXT",
         "anime_type": "TEXT",
         "episodes": "INTEGER",
@@ -123,9 +125,11 @@ def ensure_news_intelligence_columns():
     column_specs = {
         "intelligence_category": "VARCHAR",
         "intelligence_importance": "INTEGER",
+        "intelligence_confidence": "INTEGER",
         "intelligence_event": "VARCHAR",
         "intelligence_anime": "VARCHAR",
         "intelligence_summary": "TEXT",
+        "intelligence_tags": "TEXT",
     }
 
     missing_columns = [

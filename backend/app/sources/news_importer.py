@@ -1,12 +1,10 @@
 from app.database.connection import SessionLocal
 from app.database.models import NewsArticle
 from app.sources.crunchyroll_news_client import CrunchyrollNewsClient
+from app.sources.hidive_news_client import HidiveNewsClient
 
 
-def import_crunchyroll_news(limit=25):
-    client = CrunchyrollNewsClient()
-    articles = client.fetch_news(limit=limit)
-
+def save_news_articles(articles):
     db = SessionLocal()
     imported = 0
 
@@ -38,3 +36,13 @@ def import_crunchyroll_news(limit=25):
 
     finally:
         db.close()
+
+
+def import_crunchyroll_news(limit=25):
+    client = CrunchyrollNewsClient()
+    return save_news_articles(client.fetch_news(limit=limit))
+
+
+def import_hidive_news(limit=25):
+    client = HidiveNewsClient()
+    return save_news_articles(client.fetch_news(limit=limit))

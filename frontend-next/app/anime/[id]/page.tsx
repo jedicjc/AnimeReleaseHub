@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 
-import { getAnimeById } from "@/lib/api";
+import { getAnimeById, getAnimeInsight, getAnimeNews } from "@/lib/api";
+import { getAnimeDisplayTitle } from "@/lib/anime";
+import AskMaple from "@/components/AskMaple";
+import { MapleScoreBreakdown } from "@/components/anime/MapleScoreBreakdown";
 import { AnimePoster } from "@/components/AnimePoster";
 import { Navbar } from "@/components/Navbar";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -39,8 +42,12 @@ export default async function AnimeDetailPage({ params }: Props) {
     notFound();
   }
 
+  const relatedNews = await getAnimeNews(id, anime.source_url);
+  const insight = await getAnimeInsight(id);
+  const displayTitle = getAnimeDisplayTitle(anime);
+
   const data = {
-    title: anime.title ?? "Unknown Anime",
+    title: displayTitle,
     poster_url: anime.poster_url ?? null,
     status: anime.status ?? "unknown",
     synopsis: anime.synopsis ?? "No synopsis available.",
@@ -141,6 +148,13 @@ export default async function AnimeDetailPage({ params }: Props) {
                 <span className="font-semibold text-white">{data.score}</span>
               </p>
 
+              <p>
+                🔥 Trend Score:{" "}
+                <span className="font-semibold text-white">
+                  {anime.trend_score ?? "N/A"}
+                </span>
+              </p>
+
               {data.genres && (
                 <p>
                   Genres:{" "}
@@ -152,6 +166,96 @@ export default async function AnimeDetailPage({ params }: Props) {
             </div>
           </div>
         </div>
+
+        <section className="mt-10 rounded-3xl border border-white/10 bg-white/5 p-6">
+          <h2 className="text-xl font-black">📊 Anime Intelligence</h2>
+
+          <div className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
+            <Info label="Japanese Title" value={anime.japanese_title ?? "Unknown"} />
+            <Info label="Type" value={anime.anime_type ?? "Unknown"} />
+            <Info label="Episodes" value={anime.episodes?.toString() ?? "Unknown"} />
+            <Info label="Studio" value={anime.studio ?? "Unknown"} />
+            <Info label="Rank" value={anime.rank ? `#${anime.rank}` : "Unknown"} />
+            <Info
+              label="Popularity"
+              value={anime.popularity ? `#${anime.popularity}` : "Unknown"}
+            />
+            <Info
+              label="Members"
+              value={anime.members?.toLocaleString() ?? "Unknown"}
+            />
+            <Info
+              label="Favorites"
+              value={anime.favorites?.toLocaleString() ?? "Unknown"}
+            />
+            <Info label="Rating" value={anime.rating ?? "Unknown"} />
+          </div>
+
+          {anime.trailer_url && (
+            <a
+              href={anime.trailer_url}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-6 inline-flex rounded-xl bg-pink-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-pink-400"
+            >
+              ▶ Watch Official Trailer
+            </a>
+          )}
+        </section>
+
+        {insight && (
+          <>
+            <section className="mt-10 rounded-3xl border border-pink-300/20 bg-pink-500/10 p-6">
+              <h2 className="text-xl font-black">
+                🍁 Why Maple recommends this
+              </h2>
+
+              <p className="mt-4 leading-relaxed text-purple-100">
+                {insight.summary}
+              </p>
+
+              {insight.score_explanation.length > 0 && (
+                <ul className="mt-5 space-y-2 text-sm text-purple-200">
+                  {insight.score_explanation.map((reason, index) => (
+                    <li key={index}>✓ {reason}</li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <MapleScoreBreakdown breakdown={insight.score_breakdown} />
+
+            <AskMaple animeId={anime.id} />
+          </>
+        )}
+
+        <section className="mt-10 rounded-3xl border border-white/10 bg-white/5 p-6">
+          <h2 className="text-xl font-black">📰 Related News</h2>
+
+          {relatedNews.length > 0 ? (
+            <div className="mt-5 space-y-4">
+              {relatedNews.map((article) => (
+                <a
+                  key={article.id}
+                  href={article.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:bg-white/10"
+                >
+                  <p className="text-xs uppercase tracking-widest text-pink-300">
+                    {article.source} • {article.category}
+                  </p>
+
+                  <h3 className="mt-2 font-bold text-white">
+                    {article.title}
+                  </h3>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-purple-300">No related news found yet.</p>
+          )}
+        </section>
 
         {maple?.hype_score !== undefined ? (
           <section className="mt-12 rounded-3xl border border-pink-300/20 bg-white/5 p-6">
@@ -231,5 +335,14 @@ export default async function AnimeDetailPage({ params }: Props) {
         )}
       </section>
     </main>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+      <p className="text-xs text-purple-300">{label}</p>
+      <p className="mt-1 font-bold text-white">{value}</p>
+    </div>
   );
 }

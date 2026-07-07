@@ -82,7 +82,9 @@ class JikanClient:
         ) or None
 
         return {
+            "mal_id": anime.get("mal_id"),
             "display_title": anime.get("title_english") or anime.get("title") or title,
+            "title_english": anime.get("title_english"),
             "japanese_title": anime.get("title_japanese"),
             "poster_url": jpg.get("large_image_url") or jpg.get("image_url"),
             "synopsis": anime.get("synopsis"),

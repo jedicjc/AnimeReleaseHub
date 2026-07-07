@@ -1,6 +1,12 @@
 from app.database.connection import SessionLocal
 from app.database.models import Anime, NewsArticle
 from app.maple.scoring import calculate_maple_score
+from app.scout.article_classifier import (
+    canonical_event_name,
+    event_family_key,
+    event_key,
+    event_seasons,
+)
 from app.scout.intelligence import ScoutIntelligence
 from app.scout.matcher import ScoutMatcher
 from app.scout.normalizer import ScoutNormalizer
@@ -29,37 +35,66 @@ class ScoutImporter:
         if not anime:
             anime = db.query(Anime).filter(Anime.title == title).first()
 
+        if not anime and data.get("title_english"):
+            anime = (
+                db.query(Anime)
+                .filter(Anime.title_english == data.get("title_english"))
+                .first()
+            )
+
+        if not anime and data.get("title_japanese"):
+            anime = (
+                db.query(Anime)
+                .filter(Anime.japanese_title == data.get("title_japanese"))
+                .first()
+            )
+
         if not anime:
             anime = Anime(title=title)
             db.add(anime)
 
+        promoted_title = self.choose_display_title(
+            db=db,
+            anime=anime,
+            current_title=getattr(anime, "title", None),
+            incoming_title=title,
+            title_english=data.get("title_english"),
+        )
+
+        if promoted_title:
+            anime.title = promoted_title
+
         for field, value in data.items():
+            if field == "title_english" and hasattr(anime, "title_english"):
+                self.assign_if_present(anime, "title_english", value)
+                continue
+
             if field == "title_japanese" and hasattr(anime, "japanese_title"):
-                setattr(anime, "japanese_title", value)
+                self.assign_if_present(anime, "japanese_title", value)
                 continue
 
             if field == "type" and hasattr(anime, "anime_type"):
-                setattr(anime, "anime_type", value)
+                self.assign_if_present(anime, "anime_type", value)
                 continue
 
             if field == "season" and hasattr(anime, "release_season"):
-                setattr(anime, "release_season", value)
+                self.assign_if_present(anime, "release_season", value)
                 continue
 
             if field == "year" and hasattr(anime, "release_year"):
-                setattr(anime, "release_year", value)
+                self.assign_if_present(anime, "release_year", value)
                 continue
 
             if field == "studios" and hasattr(anime, "studio"):
-                setattr(anime, "studio", value)
+                self.assign_if_present(anime, "studio", value)
                 continue
 
             if field == "image_url" and hasattr(anime, "poster_url"):
-                setattr(anime, "poster_url", value)
+                self.assign_if_present(anime, "poster_url", value)
                 continue
 
             if hasattr(anime, field):
-                setattr(anime, field, value)
+                self.assign_if_present(anime, field, value)
 
         if hasattr(anime, "status") and anime.status:
             anime.status = anime.status.lower()
@@ -67,6 +102,44 @@ class ScoutImporter:
         db.flush()
         anime.maple_score = calculate_maple_score(anime)
         return anime
+
+    def assign_if_present(self, model, field: str, value):
+        if value is None:
+            return
+
+        if isinstance(value, str) and not value.strip():
+            return
+
+        setattr(model, field, value)
+
+    def choose_display_title(
+        self,
+        db,
+        anime,
+        current_title: str | None,
+        incoming_title: str | None,
+        title_english: str | None,
+    ) -> str | None:
+        if not current_title:
+            return title_english or incoming_title
+
+        if not title_english or current_title == title_english:
+            return current_title
+
+        if current_title in {
+            incoming_title,
+            getattr(anime, "japanese_title", None),
+        }:
+            title_taken = (
+                db.query(Anime)
+                .filter(Anime.title == title_english, Anime.id != anime.id)
+                .first()
+            )
+
+            if not title_taken:
+                return title_english
+
+        return current_title
 
     def save_news_article(self, db, data):
         url = data.get("url")
@@ -91,6 +164,20 @@ class ScoutImporter:
             if matched_anime and hasattr(existing, "anime_id") and not existing.anime_id:
                 existing.anime_id = matched_anime.id
 
+            if existing.intelligence_category:
+                existing.category = existing.intelligence_category
+                return existing
+
+            intel = self.intelligence.analyze_article(
+                existing,
+                matched_anime=matched_anime,
+            )
+            self.apply_article_intelligence(
+                db,
+                existing,
+                intel,
+                matched_anime=matched_anime,
+            )
             return existing
 
         article = NewsArticle()
@@ -102,16 +189,85 @@ class ScoutImporter:
         if matched_anime and hasattr(article, "anime_id"):
             article.anime_id = matched_anime.id
 
-        intel = self.intelligence.analyze_article(article)
+        intel = self.intelligence.analyze_article(
+            article,
+            matched_anime=matched_anime,
+        )
 
-        article.intelligence_category = intel.get("category")
-        article.intelligence_importance = intel.get("importance")
-        article.intelligence_event = intel.get("event")
-        article.intelligence_anime = intel.get("anime")
-        article.intelligence_summary = intel.get("summary")
+        self.apply_article_intelligence(
+            db,
+            article,
+            intel,
+            matched_anime=matched_anime,
+        )
 
         db.add(article)
         return article
+
+    def apply_article_intelligence(self, db, article, intel, matched_anime=None):
+        anime_title = (
+            intel.get("anime")
+            or (getattr(matched_anime, "title", None) if matched_anime else None)
+        )
+        event = canonical_event_name(
+            anime_title=anime_title,
+            category=intel.get("category"),
+            title=article.title,
+            summary=article.summary,
+            fallback_event=intel.get("event"),
+        )
+        event = self.find_existing_event(db, event) or event
+
+        article.category = intel.get("category")
+        article.intelligence_category = intel.get("category")
+        article.intelligence_importance = intel.get("importance")
+        article.intelligence_confidence = intel.get("confidence")
+        article.intelligence_event = event
+        article.intelligence_anime = anime_title
+        article.intelligence_summary = intel.get("summary")
+        article.intelligence_tags = intel.get("tags")
+
+    def find_existing_event(self, db, event_name):
+        key = event_key(event_name)
+        family_key = event_family_key(event_name)
+        seasons = event_seasons(event_name)
+
+        if not key:
+            return None
+
+        pending = [
+            item
+            for item in db.new
+            if isinstance(item, NewsArticle)
+            and item.intelligence_event
+        ]
+        saved = (
+            db.query(NewsArticle)
+            .filter(NewsArticle.intelligence_event.isnot(None))
+            .all()
+        )
+
+        for article in pending + saved:
+            candidate = article.intelligence_event
+
+            if event_key(candidate) == key:
+                return candidate
+
+            candidate_seasons = event_seasons(candidate)
+            both_have_different_seasons = (
+                seasons
+                and candidate_seasons
+                and seasons != candidate_seasons
+            )
+
+            if (
+                family_key
+                and event_family_key(candidate) == family_key
+                and not both_have_different_seasons
+            ):
+                return candidate
+
+        return None
 
     def import_jikan_top(self, pages=3, limit=25):
         provider = JikanProvider()

@@ -1,115 +1,109 @@
-import { ActivitySummary } from "@/components/ActivitySummary";
-import { DailyBrief } from "@/components/DailyBrief";
-import { MaplePanel } from "@/components/MaplePanel";
+import Image from "next/image";
 import { Navbar } from "@/components/Navbar";
-import { NewsGrid } from "@/components/NewsGrid";
 import { SearchBar } from "@/components/SearchBar";
-import { StatsCards } from "@/components/StatsCards";
-import { TrendingNow } from "@/components/TrendingNow";
-import { getDashboard, getTrending } from "@/lib/api";
-import { API_URL } from "@/lib/config";
+import { TrendingSection } from "@/components/dashboard/TrendingSection";
+import { MaplePicksSection } from "@/components/dashboard/MaplePicksSection";
+import { MapleInsight } from "@/components/dashboard/MapleInsight";
+import { SectionReveal } from "@/components/dashboard/SectionReveal";
+import { HighestRatedSection } from "@/components/dashboard/HighestRatedSection";
+import { LatestNewsSection } from "@/components/dashboard/LatestNewsSection";
+import { UpcomingSection } from "@/components/dashboard/UpcomingSection";
+import { getDashboard } from "@/lib/api";
 
-type PersonalRecommendation = {
-  id: number;
-  title: string;
-  personal_score: number;
-  why?: string[];
-};
-
-function getGreeting() {
-  const hour = new Date().getHours();
-
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
-}
-
-export default async function Home() {
+export default async function HomePage() {
   const dashboard = await getDashboard();
-  const trending = await getTrending();
-  let personal: PersonalRecommendation[] = [];
-
-  try {
-    const response = await fetch(
-      `${API_URL}/maple/personal/?genres=action,fantasy`,
-      { cache: "no-store" }
-    );
-
-    if (response.ok) {
-      personal = await response.json();
-    }
-  } catch {
-    personal = [];
-  }
+  const heroStats = [
+    { label: "Anime", value: dashboard.stats.anime, icon: "🍿" },
+    { label: "News", value: dashboard.stats.news, icon: "📰" },
+    { label: "Trending", value: dashboard.stats.trending, icon: "🔥" },
+    { label: "Picks", value: dashboard.stats.maple_picks, icon: "🍁" },
+  ];
 
   return (
-    <main className="min-h-screen bg-[#120d1c] text-white">
-      <section className="mx-auto max-w-7xl px-6 py-8">
+    <main className="relative min-h-screen overflow-hidden bg-[#120d1c] text-white">
+      <div className="premium-blob pointer-events-none absolute -left-32 top-20 h-96 w-96 rounded-full bg-purple-600/25 blur-[150px]" />
+      <div className="premium-blob-slow pointer-events-none absolute right-0 top-48 h-96 w-96 rounded-full bg-pink-500/25 blur-[150px]" />
+      <div className="premium-blob pointer-events-none absolute bottom-40 left-1/3 h-80 w-80 rounded-full bg-cyan-500/20 blur-[150px]" />
+
+      <section className="relative mx-auto max-w-7xl px-6 py-8">
         <Navbar />
 
-        <section className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_380px]">
-          <div className="rounded-[2rem] border border-white/10 bg-white/10 p-8">
-            <div className="mb-4 inline-flex rounded-full border border-pink-300/30 bg-pink-300/10 px-4 py-2 text-sm text-pink-100">
-              Maple Command Center
-            </div>
-
-            <h1 className="text-4xl font-black md:text-6xl">
-              {getGreeting()}, Carter.
-            </h1>
-
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-purple-100">
-              Maple tracks anime news, builds intelligence signals, and ranks
-              what matters right now.
+        <section className="mt-10 grid items-center gap-10 lg:grid-cols-2">
+          <div className="rounded-3xl border border-pink-300/20 bg-white/5 p-8 backdrop-blur">
+            <p className="text-sm uppercase tracking-widest text-pink-300">
+              🍁 Maple Intelligence
             </p>
 
-            <SearchBar />
+            <h1 className="mt-4 text-5xl font-black leading-tight md:text-7xl">
+              Hi! I&apos;m Maple.
+            </h1>
 
-            <DailyBrief dashboard={dashboard} />
+            <p className="mt-6 max-w-xl text-lg text-purple-200">
+              I&apos;ve analyzed today&apos;s anime announcements, trend scores,
+              community ratings, and release schedules. Here&apos;s everything
+              you shouldn&apos;t miss.
+            </p>
+
+            <div className="mt-8 max-w-xl">
+              <SearchBar />
+            </div>
           </div>
 
-          <MaplePanel />
+          <div className="relative flex justify-center">
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-pink-500/30 via-purple-500/20 to-cyan-500/20 blur-[120px]" />
+
+            <Image
+              src="/images/maple.png"
+              alt="Maple anime intelligence assistant"
+              width={520}
+              height={520}
+              priority
+              className="maple-float relative z-10 drop-shadow-2xl"
+            />
+          </div>
         </section>
 
-        <StatsCards
-          newsCount={dashboard.news_count}
-          animeCount={dashboard.anime_count}
-          dubCount={dashboard.dub_count}
-        />
+        <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {heroStats.map((stat) => (
+            <div
+              key={stat.label}
+              className="rounded-2xl border border-white/10 bg-black/20 p-4 transition-all duration-300 hover:-translate-y-1 hover:border-pink-300/30 hover:bg-white/10 hover:shadow-xl hover:shadow-pink-500/10"
+            >
+              <p className="text-sm font-bold text-purple-300">
+                {stat.icon} {stat.label}
+              </p>
 
-        {personal.length > 0 && (
-          <section className="mt-10">
-            <h2 className="text-xl font-black text-white">
-              Recommended for You
-            </h2>
-
-            <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-3">
-              {personal.map((a) => (
-                <div
-                  key={a.id}
-                  className="rounded-xl border border-white/10 bg-white/5 p-3"
-                >
-                  <p className="font-bold text-white">{a.title}</p>
-
-                  <p className="text-xs text-purple-300">
-                    Score: {a.personal_score}
-                  </p>
-
-                  {a.why?.[0] && (
-                    <p className="mt-2 text-[10px] text-purple-400">
-                      {a.why[0]}
-                    </p>
-                  )}
-                </div>
-              ))}
+              <p className="mt-2 text-3xl font-black text-white">
+                {stat.value}
+              </p>
             </div>
-          </section>
-        )}
+          ))}
+        </section>
 
-        <ActivitySummary categoryCounts={dashboard.category_counts} />
+        <div className="mt-12 space-y-8">
+          <SectionReveal>
+            <MapleInsight insight={dashboard.insight} />
+          </SectionReveal>
 
-        <TrendingNow anime={trending} />
+          <SectionReveal delay={80}>
+            <TrendingSection anime={dashboard.trending} />
+          </SectionReveal>
 
-        <NewsGrid articles={dashboard.latest_news} />
+          <SectionReveal delay={120}>
+            <MaplePicksSection anime={dashboard.maple_picks} />
+          </SectionReveal>
+
+          <SectionReveal delay={160}>
+            <div className="grid gap-8 lg:grid-cols-2">
+              <HighestRatedSection anime={dashboard.highest_rated} />
+              <UpcomingSection anime={dashboard.upcoming} />
+            </div>
+          </SectionReveal>
+
+          <SectionReveal delay={200}>
+            <LatestNewsSection news={dashboard.latest_news} />
+          </SectionReveal>
+        </div>
       </section>
     </main>
   );

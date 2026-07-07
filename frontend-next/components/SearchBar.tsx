@@ -7,6 +7,7 @@ import { API_URL } from "@/lib/config";
 type Anime = {
   id: number;
   title: string;
+  title_english?: string | null;
 };
 
 type News = {
@@ -43,7 +44,7 @@ export function SearchBar() {
     const animeResults: ResultItem[] = (data.anime || []).map((a: Anime) => ({
       type: "anime",
       id: a.id,
-      title: a.title,
+      title: a.title_english || a.title,
       href: `/anime/${a.id}`,
     }));
 

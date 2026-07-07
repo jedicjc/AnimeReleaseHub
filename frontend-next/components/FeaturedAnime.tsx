@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 
 import type { Anime } from "@/lib/api";
+import { getAnimeDisplayTitle } from "@/lib/anime";
 import { AnimePoster } from "@/components/AnimePoster";
 import { StatusBadge } from "@/components/StatusBadge";
 
@@ -20,6 +21,8 @@ function formatRelease(anime: Anime) {
 }
 
 export function FeaturedAnime({ anime }: Props) {
+  const displayTitle = getAnimeDisplayTitle(anime);
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 18 }}
@@ -30,7 +33,7 @@ export function FeaturedAnime({ anime }: Props) {
       <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 opacity-20 blur-3xl" />
 
       <div className="relative z-10 grid gap-8 lg:grid-cols-[280px_1fr]">
-        <AnimePoster title={anime.title} posterUrl={anime.poster_url} />
+        <AnimePoster title={displayTitle} posterUrl={anime.poster_url} />
 
         <div>
           <p className="text-sm font-bold uppercase tracking-widest text-pink-300">
@@ -42,7 +45,7 @@ export function FeaturedAnime({ anime }: Props) {
           </div>
 
           <h1 className="mt-5 text-4xl font-black leading-tight lg:text-5xl">
-            {anime.title}
+            {displayTitle}
           </h1>
 
           {anime.synopsis && (

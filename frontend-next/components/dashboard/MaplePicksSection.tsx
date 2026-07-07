@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Anime } from "@/lib/api";
+import { getAnimeDisplayTitle } from "@/lib/anime";
 
 function explainPick(anime: Anime) {
   if ((anime.trend_score ?? 0) >= 60) {
@@ -54,39 +56,81 @@ export function MaplePicksSection({ anime }: { anime: Anime[] }) {
 
   return (
     <section className="rounded-3xl border border-pink-300/20 bg-pink-500/10 p-6">
-      <h2 className="text-xl font-black">🍁 Maple Picks</h2>
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-xl font-black">🍁 Maple Recommends</h2>
 
-      <div className="mt-5 grid gap-4 md:grid-cols-3">
-        {anime.slice(0, 3).map((item) => (
-          <Link
-            key={item.id}
-            href={`/anime/${item.id}`}
-            className="rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:bg-white/10"
-          >
-            <p className="text-xs font-bold text-pink-300">🍁 Maple Pick</p>
+        <Link
+          href="/anime"
+          className="shrink-0 text-sm font-bold text-pink-300 transition hover:text-pink-200"
+        >
+          View all →
+        </Link>
+      </div>
 
-            <h3 className="mt-2 font-black text-white">{item.title}</h3>
+      <div className="mt-5 grid gap-5 lg:grid-cols-3">
+        {anime.slice(0, 3).map((item) => {
+          const mapleScore = calculateDisplayMapleScore(item);
 
-            <p className="mt-3 text-sm text-purple-200">
-              {explainPick(item)}
-            </p>
+          return (
+            <Link
+              key={item.id}
+              href={`/anime/${item.id}`}
+              className="grid gap-4 rounded-2xl border border-white/10 bg-black/20 p-4 transition-all duration-300 hover:-translate-y-2 hover:bg-white/10 hover:shadow-2xl hover:shadow-pink-500/20 sm:grid-cols-[140px_1fr]"
+            >
+              {item.poster_url ? (
+                <Image
+                  src={item.poster_url}
+                  alt={getAnimeDisplayTitle(item)}
+                  width={280}
+                  height={400}
+                  className="h-52 w-full rounded-xl object-cover sm:h-full"
+                />
+              ) : (
+                <div className="flex h-52 w-full items-center justify-center rounded-xl bg-pink-500/10 text-4xl sm:h-full">
+                  🍁
+                </div>
+              )}
 
-            <div className="mt-4 rounded-2xl border border-pink-300/20 bg-pink-500/10 p-3">
-              <p className="text-xs font-bold uppercase tracking-widest text-pink-300">
-                🍁 Maple Score
-              </p>
+              <div>
+                <p className="text-xs font-bold text-pink-300">
+                  🍁 Maple Pick
+                </p>
 
-              <p className="mt-1 text-3xl font-black text-white">
-                {calculateDisplayMapleScore(item)}
-              </p>
+                <h3 className="mt-2 font-black text-white">
+                  {getAnimeDisplayTitle(item)}
+                </h3>
 
-              <div className="mt-2 flex gap-3 text-xs text-purple-300">
-                <span>🔥 Trend {item.trend_score ?? 0}</span>
-                <span>⭐ MAL {item.score ?? "N/A"}</span>
+                <p className="mt-3 text-sm text-purple-200">
+                  {explainPick(item)}
+                </p>
+
+                <div className="mt-4 rounded-2xl border border-pink-300/20 bg-pink-500/10 p-3">
+                  <p className="text-xs font-bold uppercase tracking-widest text-pink-300">
+                    🍁 Maple Score
+                  </p>
+
+                  <p className="mt-1 text-3xl font-black text-white">
+                    {mapleScore.toFixed(1)}
+                    <span className="ml-1 text-base font-bold text-pink-200">
+                      / 100
+                    </span>
+                  </p>
+
+                  <div className="mt-2 flex flex-wrap gap-3 text-xs text-purple-300">
+                    <span>🔥 Trend {item.trend_score ?? 0}</span>
+                    <span>⭐ MAL {item.score ?? "N/A"}</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          );
+        })}
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-pink-300/20 bg-pink-500/10 p-4 text-sm text-pink-100">
+        🍁 Maple Score combines trend momentum, community rating, popularity,
+        favorites, members, rank, upcoming status, and trailer availability to
+        highlight the strongest anime right now.
       </div>
     </section>
   );

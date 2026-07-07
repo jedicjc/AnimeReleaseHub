@@ -34,6 +34,8 @@ def search(query: str = Query(..., min_length=2)):
 
         for a in anime_rows:
             score = score_match(a.title, query)
+            score = max(score, score_match(getattr(a, "title_english", None), query))
+            score = max(score, score_match(a.japanese_title, query))
 
             if a.synopsis:
                 score += score_match(a.synopsis, query) * 0.3
@@ -45,6 +47,7 @@ def search(query: str = Query(..., min_length=2)):
                 ranked_anime.append({
                     "id": a.id,
                     "title": a.title,
+                    "title_english": getattr(a, "title_english", None),
                     "poster_url": a.poster_url,
                     "score": score
                 })
