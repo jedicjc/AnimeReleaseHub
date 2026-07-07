@@ -12,22 +12,55 @@ class JikanProvider(ScoutProvider):
     provider_type = "anime"
     BASE_URL = "https://api.jikan.moe/v4"
 
-    def __init__(self, delay: float = 0.7, timeout: int = REQUEST_TIMEOUT):
+    def __init__(
+        self,
+        delay: float = 0.7,
+        timeout: int = REQUEST_TIMEOUT,
+        retries: int = 3,
+        retry_backoff: float = 1.25,
+    ):
         self.delay = delay
         self.timeout = timeout
+        self.retries = retries
+        self.retry_backoff = retry_backoff
 
     def get(self, path, params=None):
-        time.sleep(self.delay)
+        last_error = None
 
-        response = requests.get(
-            f"{self.BASE_URL}{path}",
-            params=params or {},
-            timeout=self.timeout,
-            headers=HEADERS,
-        )
+        for attempt in range(1, self.retries + 1):
+            time.sleep(self.delay)
 
-        response.raise_for_status()
-        return response.json()
+            try:
+                response = requests.get(
+                    f"{self.BASE_URL}{path}",
+                    params=params or {},
+                    timeout=self.timeout,
+                    headers=HEADERS,
+                )
+
+                response.raise_for_status()
+                return response.json()
+
+            except requests.HTTPError as error:
+                last_error = error
+                status_code = getattr(error.response, "status_code", None)
+                should_retry = status_code is not None and status_code >= 500
+
+                if attempt >= self.retries or not should_retry:
+                    raise
+
+            except requests.RequestException as error:
+                last_error = error
+
+                if attempt >= self.retries:
+                    raise
+
+            time.sleep(self.retry_backoff * attempt)
+
+        if last_error:
+            raise last_error
+
+        raise RuntimeError("Jikan request failed without an error")
 
     def fetch_top_anime(self, page=1, limit=25):
         return self.get(
