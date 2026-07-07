@@ -6,10 +6,13 @@ import requests
 from bs4 import BeautifulSoup
 
 from app.scout.config import REQUEST_TIMEOUT
+from app.scout.providers.base import ScoutProvider
 from app.scout.sources import HEADERS
 
 
-class CrunchyrollProvider:
+class CrunchyrollProvider(ScoutProvider):
+    name = "crunchyroll"
+    provider_type = "news"
     FEED_URL = "https://www.crunchyroll.com/news/rss"
     NEWS_URL = "https://www.crunchyroll.com/news"
     SITEMAP_URLS = [
@@ -233,3 +236,11 @@ class CrunchyrollProvider:
         except Exception as error:
             diagnostics["error"] = repr(error)
             return {"items": [], "diagnostics": diagnostics}
+
+    def fetch(self, limit=25):
+        result = self.fetch_news(limit=limit)
+
+        if isinstance(result, dict):
+            return result.get("items", [])
+
+        return result

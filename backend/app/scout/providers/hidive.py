@@ -6,10 +6,13 @@ import requests
 from bs4 import BeautifulSoup
 
 from app.scout.config import REQUEST_TIMEOUT
+from app.scout.providers.base import ScoutProvider
 from app.scout.sources import HEADERS
 
 
-class HidiveProvider:
+class HidiveProvider(ScoutProvider):
+    name = "hidive"
+    provider_type = "news"
     FEED_URL = "https://news.hidive.com/rss"
     NEWS_URL = "https://news.hidive.com/"
     SITEMAP_URLS = [
@@ -230,3 +233,11 @@ class HidiveProvider:
         except Exception as error:
             diagnostics["error"] = repr(error)
             return {"items": [], "diagnostics": diagnostics}
+
+    def fetch(self, limit=25):
+        result = self.fetch_news(limit=limit)
+
+        if isinstance(result, dict):
+            return result.get("items", [])
+
+        return result

@@ -3,10 +3,13 @@ import time
 import requests
 
 from app.scout.config import REQUEST_TIMEOUT
+from app.scout.providers.base import ScoutProvider
 from app.scout.sources import HEADERS
 
 
-class JikanProvider:
+class JikanProvider(ScoutProvider):
+    name = "jikan"
+    provider_type = "anime"
     BASE_URL = "https://api.jikan.moe/v4"
 
     def __init__(self, delay: float = 0.7, timeout: int = REQUEST_TIMEOUT):
@@ -45,3 +48,6 @@ class JikanProvider:
                 "sfw": "true",
             },
         ).get("data", [])
+
+    def fetch(self, limit=25):
+        return self.fetch_top_anime(page=1, limit=limit)
