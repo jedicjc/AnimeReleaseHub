@@ -1,5 +1,6 @@
 from app.database.models import Anime, NewsArticle
 from app.maple.scoring import calculate_maple_score
+from app.news_utils import is_valid_news_title
 
 
 class DashboardService:
@@ -24,12 +25,19 @@ class DashboardService:
         )
 
     def latest_news(self, limit=10):
-        return (
+        articles = (
             self.db.query(NewsArticle)
             .order_by(NewsArticle.created_at.desc())
-            .limit(limit)
             .all()
         )
+
+        filtered = [
+            article
+            for article in articles
+            if is_valid_news_title(getattr(article, "title", None))
+        ]
+
+        return filtered[:limit]
 
     def upcoming(self, limit=10):
         return (

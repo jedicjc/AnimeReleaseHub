@@ -7,6 +7,7 @@ from app.database.models import Anime, NewsArticle
 from app.maple.chat_engine import MapleChatEngine
 from app.maple.comparison_engine import MapleComparisonEngine
 from app.maple.insight_engine import MapleInsightEngine
+from app.news_utils import is_valid_news_title
 from app.scout.matcher import ScoutMatcher
 
 router = APIRouter(prefix="/anime", tags=["Anime"])
@@ -49,6 +50,11 @@ def get_anime_news(anime_id: int):
             .order_by(NewsArticle.created_at.desc())
             .all()
         )
+        articles = [
+            article
+            for article in articles
+            if is_valid_news_title(getattr(article, "title", None))
+        ]
 
         if articles:
             return articles
@@ -78,7 +84,8 @@ def get_anime_news(anime_id: int):
                 article_text = f"{article.title or ''} {article.summary or ''}".lower()
 
                 if any(title in article_text for title in fallback_titles):
-                    related_articles.append(article)
+                    if is_valid_news_title(getattr(article, "title", None)):
+                        related_articles.append(article)
 
             if related_articles:
                 return related_articles
@@ -86,12 +93,17 @@ def get_anime_news(anime_id: int):
         if not anime.source_url:
             return []
 
-        return (
+        articles = (
             db.query(NewsArticle)
             .filter(NewsArticle.url == anime.source_url)
             .order_by(NewsArticle.created_at.desc())
             .all()
         )
+        return [
+            article
+            for article in articles
+            if is_valid_news_title(getattr(article, "title", None))
+        ]
 
     finally:
         db.close()
@@ -114,6 +126,11 @@ def get_anime_insight(anime_id: int):
             .limit(5)
             .all()
         )
+        news = [
+            article
+            for article in news
+            if is_valid_news_title(getattr(article, "title", None))
+        ]
 
         engine = MapleInsightEngine(anime=anime, news=news)
 
@@ -146,6 +163,11 @@ def ask_maple(anime_id: int, request: AskMapleRequest):
             .limit(5)
             .all()
         )
+        news = [
+            article
+            for article in news
+            if is_valid_news_title(getattr(article, "title", None))
+        ]
 
         comparison_engine = MapleComparisonEngine(db)
         engine = MapleChatEngine(

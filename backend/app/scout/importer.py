@@ -1,3 +1,5 @@
+import json
+
 from app.database.connection import SessionLocal
 from app.database.models import Anime, NewsArticle
 from app.maple.scoring import calculate_maple_score
@@ -228,7 +230,7 @@ class ScoutImporter:
         article.intelligence_event = event
         article.intelligence_anime = anime_title
         article.intelligence_summary = intel.get("summary")
-        article.intelligence_tags = intel.get("tags")
+        article.intelligence_tags = json.dumps(intel.get("tags", []))
 
     def find_existing_event(self, db, event_name):
         key = event_key(event_name)

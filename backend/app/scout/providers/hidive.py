@@ -41,6 +41,7 @@ class HidiveProvider(ScoutProvider):
     def _looks_like_article_url(self, url):
         parsed = urlparse(url)
         path = parsed.path.rstrip("/")
+        slug = path.split("/")[-1].lower() if path else ""
 
         if "hidive.com" not in parsed.netloc:
             return False
@@ -55,6 +56,15 @@ class HidiveProvider(ScoutProvider):
             path.endswith(ext)
             for ext in (".css", ".js", ".png", ".jpg", ".jpeg", ".svg", ".webp", ".ico")
         ):
+            return False
+
+        if slug in {"html", "body", "head", "script", "noscript", "div", "span"}:
+            return False
+
+        if len(slug) < 6:
+            return False
+
+        if "-" not in slug and "_" not in slug:
             return False
 
         return len(path.split("/")) >= 2
@@ -83,7 +93,7 @@ class HidiveProvider(ScoutProvider):
             title = (raw_title or "").strip() or self._title_from_url(url)
             candidates.append(self._build_item(title=title, url=url))
 
-        for link in soup.select("a[href], link[href]"):
+        for link in soup.select("a[href]"):
             href = link.get("href")
             title = (
                 link.get_text(" ", strip=True)
@@ -92,12 +102,10 @@ class HidiveProvider(ScoutProvider):
                 or link.get("data-title")
                 or ""
             )
-            add_candidate(href, title)
+            if title and len(title.strip()) >= 4:
+                add_candidate(href, title)
 
         for match in re.findall(r'https?://[^"\'>\s]+', html_text):
-            add_candidate(match)
-
-        for match in re.findall(r'/[A-Za-z0-9][^"\'>\s]+', html_text):
             add_candidate(match)
 
         return candidates

@@ -5,15 +5,19 @@ import requests
 from app.scout.providers.base import ScoutProvider
 
 
-class AnimeDubHubProvider(ScoutProvider):
-    name = "animedubhub"
+class AnimeDubUpdatesProvider(ScoutProvider):
+    name = "animedubupdates"
     provider_type = "news"
 
     BASE_URL = "https://api.x.com/2"
 
     def __init__(self):
         self.token = os.getenv("X_BEARER_TOKEN")
-        self.username = os.getenv("ANIMEDUBHUB_USERNAME", "AnimeDubHub")
+        self.username = (
+            os.getenv("ANIMEDUBUPDATES_USERNAME")
+            or os.getenv("ANIMEDUBHUB_USERNAME")
+            or "AnimeDubUpdates"
+        )
 
     def fetch(self, limit=25):
         if not self.token:
@@ -27,7 +31,7 @@ class AnimeDubHubProvider(ScoutProvider):
                 "title": tweet["text"][:120],
                 "summary": tweet["text"],
                 "url": f"https://x.com/{self.username}/status/{tweet['id']}",
-                "source": "AnimeDubHub",
+                "source": "AnimeDubUpdates",
                 "published_at": tweet.get("created_at"),
             }
             for tweet in tweets
@@ -61,3 +65,7 @@ class AnimeDubHubProvider(ScoutProvider):
 
         response.raise_for_status()
         return response.json().get("data", [])
+
+
+# Backward-compatible alias for older imports.
+AnimeDubHubProvider = AnimeDubUpdatesProvider

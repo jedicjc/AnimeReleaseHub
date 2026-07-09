@@ -23,9 +23,13 @@ def _extract_json(raw: str) -> dict:
         return json.loads(match.group(0))
 
 
-def _normalize_tags(raw_tags) -> str:
+def _normalize_tags(raw_tags) -> list[str]:
     if isinstance(raw_tags, str):
-        tags = raw_tags.split(",")
+        try:
+            parsed = json.loads(raw_tags)
+            tags = parsed if isinstance(parsed, list) else raw_tags.split(",")
+        except (TypeError, ValueError, json.JSONDecodeError):
+            tags = raw_tags.split(",")
     elif isinstance(raw_tags, list):
         tags = raw_tags
     else:
@@ -39,7 +43,7 @@ def _normalize_tags(raw_tags) -> str:
         if normalized and normalized not in cleaned:
             cleaned.append(normalized)
 
-    return ", ".join(cleaned[:8])
+    return cleaned[:8]
 
 
 class ScoutIntelligence:
@@ -86,14 +90,19 @@ JSON shape:
 }}
 
 Rules:
+- Return ONLY valid JSON.
 - category must be one of the exact category strings listed above.
-- importance must be 0-100.
 - confidence must be 0-100.
+- importance must be 0-100.
 - Only use confidence 90+ when you are very confident.
 - event should name the underlying story, not the publishing outlet.
 - Use the Known Anime Match when it fits the article.
 - summary must be under 40 words.
-- tags must be short topical tags.
+- tags must contain 3-8 lowercase strings.
+- Always include the anime title as a lowercase tag when known.
+- Include event tags like "season 2", "trailer", "english dub", "simuldub", "voice cast", "movie", or "release date" when relevant.
+- Include genre/theme tags when obvious, such as "fantasy", "romance", "action", "isekai", "medical mystery", or "historical".
+- If the article or post mentions English dub, dub cast, simuldub, dubbed premiere, or home video dub release, use one of the dub categories.
 - Do not include markdown.
 - Do not include explanation outside JSON.
 """.strip()
@@ -102,7 +111,17 @@ Rules:
             raw = self.ai.answer(prompt)
             intel = _extract_json(raw)
         except Exception:
-            intel = {}
+            return {
+                "category": ScoutCategory.GENERAL.value,
+                "importance": 50,
+                "confidence": 30,
+                "event": "Unknown",
+                "anime": matched_title,
+                "summary": article.summary or article.title,
+                "tags": _normalize_tags(
+                    [matched_title.lower(), "general news"] if matched_title else ["general news"]
+                ),
+            }
 
         category = normalize_category(
             intel.get("category") or classify_article(article.title, article.summary)

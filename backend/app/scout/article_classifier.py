@@ -7,6 +7,10 @@ class ScoutCategory(str, Enum):
     TRAILER = "Trailer"
     NEW_ANIME = "New Anime"
     DUB = "English Dub"
+    SIMULDUB = "Simuldub"
+    DUB_PREMIERE = "Dub Premiere"
+    DUB_CAST = "Dub Cast"
+    HOME_VIDEO_DUB = "Home Video Dub"
     MOVIE = "Movie"
     CASTING = "Casting"
     RELEASE = "Release Date"
@@ -20,6 +24,10 @@ CATEGORY_IMPORTANCE_BONUS = {
     ScoutCategory.SEASON: 40,
     ScoutCategory.TRAILER: 25,
     ScoutCategory.DUB: 20,
+    ScoutCategory.SIMULDUB: 20,
+    ScoutCategory.DUB_PREMIERE: 22,
+    ScoutCategory.DUB_CAST: 18,
+    ScoutCategory.HOME_VIDEO_DUB: 20,
     ScoutCategory.MOVIE: 30,
 }
 
@@ -61,6 +69,12 @@ _CATEGORY_ALIASES = {
     "dub": ScoutCategory.DUB,
     "dub_update": ScoutCategory.DUB,
     "english dub": ScoutCategory.DUB,
+    "simuldub": ScoutCategory.SIMULDUB,
+    "dub premiere": ScoutCategory.DUB_PREMIERE,
+    "dub cast": ScoutCategory.DUB_CAST,
+    "home video dub": ScoutCategory.HOME_VIDEO_DUB,
+    "blu ray dub": ScoutCategory.HOME_VIDEO_DUB,
+    "home video release": ScoutCategory.HOME_VIDEO_DUB,
     "movie": ScoutCategory.MOVIE,
     "film": ScoutCategory.MOVIE,
     "casting": ScoutCategory.CASTING,
@@ -106,6 +120,14 @@ def normalize_category(value) -> ScoutCategory:
 def classify_article(title: str = "", summary: str = "") -> ScoutCategory:
     text = f"{title or ''} {summary or ''}".lower()
 
+    if "simuldub" in text:
+        return ScoutCategory.SIMULDUB
+    if "dub cast" in text or "english cast" in text:
+        return ScoutCategory.DUB_CAST
+    if "home video dub" in text or "blu-ray dub" in text or "blu ray dub" in text:
+        return ScoutCategory.HOME_VIDEO_DUB
+    if "dub premiere" in text or "dubbed premiere" in text:
+        return ScoutCategory.DUB_PREMIERE
     if "english dub" in text or re.search(r"\bdub(?:bed|s)?\b", text):
         return ScoutCategory.DUB
     if "trailer" in text or "teaser" in text or "promo" in text or "pv" in text:
@@ -164,7 +186,13 @@ def detect_event_type(title: str = "", summary: str = "", category=None) -> str:
 
     scout_category = normalize_category(category or classify_article(title, summary))
 
-    if scout_category == ScoutCategory.DUB:
+    if scout_category in {
+        ScoutCategory.DUB,
+        ScoutCategory.SIMULDUB,
+        ScoutCategory.DUB_PREMIERE,
+        ScoutCategory.DUB_CAST,
+        ScoutCategory.HOME_VIDEO_DUB,
+    }:
         return ScoutCategory.DUB.value
     if scout_category == ScoutCategory.SEASON:
         return ScoutCategory.SEASON.value
