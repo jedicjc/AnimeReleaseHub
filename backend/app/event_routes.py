@@ -2,7 +2,6 @@ from fastapi import APIRouter
 
 from app.database.connection import SessionLocal
 from app.database.models import NewsArticle
-from app.news_utils import is_valid_news_title
 from app.scout.event_engine import ScoutEventEngine
 
 router = APIRouter(
@@ -16,14 +15,15 @@ def get_events():
     db = SessionLocal()
 
     try:
-        articles = db.query(NewsArticle).all()
-        articles = [
-            article
-            for article in articles
-            if is_valid_news_title(getattr(article, "title", None))
-        ]
+        articles = (
+            db.query(NewsArticle)
+            .filter(NewsArticle.intelligence_event.isnot(None))
+            .all()
+        )
 
-        return ScoutEventEngine().build_events(articles)
+        events = ScoutEventEngine().build_events(articles)
+
+        return events
 
     finally:
         db.close()
