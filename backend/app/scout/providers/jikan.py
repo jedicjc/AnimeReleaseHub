@@ -2,7 +2,6 @@ import time
 
 import requests
 
-from app.scout.config import REQUEST_TIMEOUT
 from app.scout.providers.base import ScoutProvider
 from app.scout.sources import HEADERS
 
@@ -15,9 +14,9 @@ class JikanProvider(ScoutProvider):
     def __init__(
         self,
         delay: float = 0.7,
-        timeout: int = REQUEST_TIMEOUT,
+        timeout: int = 30,
         retries: int = 3,
-        retry_backoff: float = 1.25,
+        retry_backoff: float = 2.0,
     ):
         self.delay = delay
         self.timeout = timeout
@@ -25,42 +24,28 @@ class JikanProvider(ScoutProvider):
         self.retry_backoff = retry_backoff
 
     def get(self, path, params=None):
+        params = params or {}
         last_error = None
 
-        for attempt in range(1, self.retries + 1):
-            time.sleep(self.delay)
-
+        for attempt in range(3):
             try:
+                time.sleep(self.delay)
+
                 response = requests.get(
                     f"{self.BASE_URL}{path}",
-                    params=params or {},
-                    timeout=self.timeout,
+                    params=params,
+                    timeout=30,
                     headers=HEADERS,
                 )
 
                 response.raise_for_status()
                 return response.json()
 
-            except requests.HTTPError as error:
-                last_error = error
-                status_code = getattr(error.response, "status_code", None)
-                should_retry = status_code is not None and status_code >= 500
-
-                if attempt >= self.retries or not should_retry:
-                    raise
-
             except requests.RequestException as error:
                 last_error = error
+                time.sleep(self.retry_backoff * (attempt + 1))
 
-                if attempt >= self.retries:
-                    raise
-
-            time.sleep(self.retry_backoff * attempt)
-
-        if last_error:
-            raise last_error
-
-        raise RuntimeError("Jikan request failed without an error")
+        raise last_error
 
     def fetch_top_anime(self, page=1, limit=25):
         return self.get(
@@ -83,4 +68,33 @@ class JikanProvider(ScoutProvider):
         ).get("data", [])
 
     def fetch(self, limit=25):
-        return self.fetch_top_anime(page=1, limit=limit)
+        try:
+            return self.fetch_top_anime(page=1, limit=limit)
+        except requests.RequestException:
+            return self.fetch_current_season(page=1, limit=limit)
+
+    def health_check(self):
+        try:
+            items = self.fetch_current_season(page=1, limit=1)
+            return {
+                "provider": self.name,
+                "status": "healthy",
+                "sample_count": len(items),
+                "endpoint": "seasons/now",
+            }
+        except Exception as season_error:
+            try:
+                items = self.fetch_top_anime(page=1, limit=1)
+                return {
+                    "provider": self.name,
+                    "status": "degraded",
+                    "sample_count": len(items),
+                    "endpoint": "top/anime",
+                    "message": f"season endpoint unavailable: {season_error}",
+                }
+            except Exception as top_error:
+                return {
+                    "provider": self.name,
+                    "status": "error",
+                    "message": str(top_error),
+                }
