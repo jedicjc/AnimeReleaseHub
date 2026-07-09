@@ -4,6 +4,7 @@ from app.maple.insight_engine import MapleInsightEngine
 from app.maple.prompt_builder import MaplePromptBuilder
 from app.maple.ai_engine import MapleAIEngine
 from app.maple.preferences import MaplePreferences
+from app.scout.event_service import ScoutEventService
 
 
 class MapleChatEngine:
@@ -46,6 +47,7 @@ class MapleChatEngine:
         self.summary = summary
         self.comparison_engine = comparison_engine
         self.preferences = self.build_preferences()
+        self.event_service = ScoutEventService()
         self.engine = MapleInsightEngine(anime=anime, news=self.news)
         self.ai_enabled = os.getenv("MAPLE_AI_ENABLED", "false").lower() == "true"
 
@@ -203,6 +205,22 @@ class MapleChatEngine:
 
     def rule_based_answer(self, question: str):
         q = question.lower()
+
+        if any(word in q for word in ["announcement", "recent", "update", "event"]):
+            events = self.event_service.get_events_for_anime(self.anime.title)
+
+            if events:
+                latest = sorted(
+                    events,
+                    key=lambda event: event.importance,
+                    reverse=True,
+                )[0]
+
+                return (
+                    f"The biggest recent event is '{latest.event}'. "
+                    f"{latest.summary} "
+                    f"It was reported by {len(latest.sources)} source(s)."
+                )
 
         if any(word in q for word in ["trend", "trending", "popular"]):
             return self.engine.anime_summary()
